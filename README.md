@@ -1,6 +1,6 @@
 # Haink: An Applied AI Agent
 
-A language agent that incorporates the knowledge of the Applied AI team at Redis.
+A slack integrated agent built from scratch with async processing capabilities.
 
 ## Architecture
 
@@ -114,7 +114,7 @@ uv run python scripts/seed_tracking_index.py
 ![UI](resources/content_mgmt.png)
 ![UI2](resources/content_mgmt_ingest.png)
 
-Note: there is a dependency on auth0 for the UI login. For reference dev this is less essential but if you would like to configure with full login ability you will need to set the following env variables.
+Note: outside of local there is a dependency for auth0 to protect the endpoints which can be implemented with the following env variables and setting permissions for: `content:read`, `content:manage`, `content:process` in auth0.
 
 ```
 # Auth0 Configuration
@@ -127,21 +127,3 @@ AUTH0_CLIENT_SECRET=your-client-secret
 ```
 
 📖 **[Full Content Management Documentation](docs/CONTENT_MANAGEMENT.md)**
-
-## Content Management
-
-Content management system using Docket workers and S3 storage for easy content addition/update/deletion. **All content management endpoints are protected by Auth0 authentication.**
-
-**API Endpoints**:
-```bash
-# Content management API endpoints available at /api/content/*
-# Requires Auth0 authentication - see docs/CONTENT_MANAGEMENT.md
-```
-
-📖 **[Content Management Documentation](docs/CONTENT_MANAGEMENT.md)**
-
-### Auth0 Setup
-
-1. Create an Auth0 account and application
-2. Configure environment variables (see `env.example`)
-3. Set up permissions: `content:read`, `content:manage`, `content:process`
