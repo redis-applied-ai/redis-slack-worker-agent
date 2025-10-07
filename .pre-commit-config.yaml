@@ -1,0 +1,40 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^data/
+      - id: end-of-file-fixer
+        exclude: ^data/
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: debug-statements
+        exclude: ^data/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.11
+    hooks:
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+        exclude: ^data/
+      # Run the formatter
+      - id: ruff-format
+        exclude: ^data/
+
+  # This is just so annoying to run on every commit.
+  # - repo: local
+  #   hooks:
+  #     - id: pytest
+  #       name: pytest
+  #       entry: .venv/bin/pytest
+  #       language: system
+  #       types: [python]
+  #       pass_filenames: false
+  #       # Only run pytest if test files or source files have changed
+  #       files: ^(tests/.*|app/.*|ai/.*|pipelines/.*)\.py$
+  #       args: [--no-header, -rN, --tb=short]

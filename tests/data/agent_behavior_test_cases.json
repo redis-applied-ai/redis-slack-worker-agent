@@ -1,0 +1,222 @@
+[
+    {
+        "category": "brief_satisfied",
+        "user_input": "sure",
+        "thread_context": [
+            {
+                "user": "John",
+                "text": "Does Redis support vector search?"
+            },
+            {
+                "user": "Haink",
+                "text": "Yes, Redis supports vector search with sub-millisecond performance..."
+            }
+        ],
+        "expected_behavior": "Brief acknowledgment, no promotional content",
+        "weight": 1.0
+    },
+    {
+        "category": "brief_satisfied",
+        "user_input": "thanks, that answers it",
+        "thread_context": [
+            {
+                "user": "Sarah",
+                "text": "How do I set up semantic caching?"
+            },
+            {
+                "user": "Haink",
+                "text": "You can set up semantic caching by..."
+            }
+        ],
+        "expected_behavior": "Simple thanks acknowledgment, no follow-up info",
+        "weight": 1.0
+    },
+    {
+        "category": "brief_satisfied",
+        "user_input": "yep, got it",
+        "thread_context": [],
+        "expected_behavior": "Brief positive response, no elaboration",
+        "weight": 1.0
+    },
+    {
+        "category": "agent_tools",
+        "user_input": "What tools do you have access to?",
+        "thread_context": [],
+        "expected_behavior": "Focus on AI capabilities (search_knowledge_base, web_search, vector retrieval, memory) NOT Redis products. May ask for clarification.",
+        "weight": 1.5
+    },
+    {
+        "category": "agent_tools",
+        "user_input": "What can you do as an AI agent?",
+        "thread_context": [],
+        "expected_behavior": "Focus on AI capabilities, not Redis product features",
+        "weight": 1.5
+    },
+    {
+        "category": "agent_tools",
+        "user_input": "What are your capabilities?",
+        "thread_context": [],
+        "expected_behavior": "Describe AI agent functions (search, retrieval, memory), may clarify if they want Redis offerings",
+        "weight": 1.5
+    },
+    {
+        "category": "redis_relevant",
+        "user_input": "How does Redis compare to Pinecone for vector search?",
+        "thread_context": [],
+        "expected_behavior": "Balanced comparison, mention Redis strengths naturally",
+        "weight": 1.0
+    },
+    {
+        "category": "redis_relevant",
+        "user_input": "What tools does Redis have for AI workloads?",
+        "thread_context": [],
+        "expected_behavior": "Focus on Redis products (vector DB, caching, etc), NOT agent capabilities",
+        "weight": 1.0
+    },
+    {
+        "category": "redis_relevant",
+        "user_input": "Can I use Redis for semantic caching?",
+        "thread_context": [],
+        "expected_behavior": "Direct answer with Redis capabilities, practical next steps",
+        "weight": 1.0
+    },
+    {
+        "category": "general_ai",
+        "user_input": "What's new in AI?",
+        "thread_context": [],
+        "expected_behavior": "Ask for clarification about specific area, don't dump Redis info",
+        "weight": 1.0
+    },
+    {
+        "category": "general_ai",
+        "user_input": "Tell me about vector databases",
+        "thread_context": [],
+        "expected_behavior": "General info first, Redis mentioned naturally if relevant",
+        "weight": 1.0
+    },
+    {
+        "category": "edge_case",
+        "user_input": "sure, you answered the question. thanks",
+        "thread_context": [
+            {
+                "user": "Jeremy",
+                "text": "Does redis integrate with pipecat?"
+            },
+            {
+                "user": "Haink",
+                "text": "At this time, there is no official Redis integration with Pipecat. However, you can architect a custom integration..."
+            }
+        ],
+        "expected_behavior": "Brief acknowledgment only, NO recap or additional Redis features",
+        "weight": 2.0
+    },
+    {
+        "category": "regression_examples",
+        "user_input": "I have a customer interested in semantic caching and they are looking for code examples... can you help me out?",
+        "thread_context": [
+            {
+                "user": "robert",
+                "text": "I have a customer interested in semantic caching and they are looking for code examples... can you help me out?"
+            },
+            {
+                "user": "haink",
+                "text": "Absolutely! Here are some code examples and resources to help your customer get started with semantic caching using Redis:\n• The core idea is to use a semantic cache that stores prompts and their responses, and checks for similar prompts using vector similarity (not just exact matches).\n• You can use the SemanticCache class from the redisvl library to create and interact with a semantic cache.\nHere's a basic example in Python:\npython\nfrom redisvl.extensions.llmcache import SemanticCache\n\n# Initialize the semantic cache\nsemantic_cache = SemanticCache(\n    name=\"oregon_trail_cache\",\n    redis_url=REDIS_URL,  # Replace with your Redis connection string\n    distance_threshold=0.1,  # Controls how \"close\" a match must be\n)\n\n# Store a prompt and its response\nhunting_example = \"There's a deer. You're starving. You know what you have to do...\"\nsemantic_cache.store(prompt=hunting_example, response=\"bang\")\n\n# Check the cache for a similar prompt\nresult = semantic_cache.check(\n    prompt=\"There's a deer. You're hungry. You know what you have to do...\",\n    return_fields=[\"response\"]\n)\nprint(result)\n• You can also test the cache with different scenarios and measure cache hits:\npython\nscenarios = [\n    {\n        \"question\": \"There's a deer. You're hungry. You know what you have to do...\",\n        \"answer\": \"bang\",\n        \"type\": \"cache_hit\",\n    },\n    # Add more scenarios as needed\n]\n\nfor scenario in scenarios:\n    cache_hit = semantic_cache.check(\n        prompt=scenario[\"question\"], return_fields=[\"response\"]\n    )\n    print(f\"Question: {scenario['question']}\")\n    print(f\"Cache hit: {cache_hit}\")\n• For a full notebook example (including using Google Gemini or VertexAI for FAQ extraction and pre-populating the cache), check out this Colab notebook:\nSemantic Caching with Redis and Gemini Colab Notebook\nLet me know if you need more advanced examples or want to see integration with frameworks like LangChain!"
+            }
+        ],
+        "expected_behavior": "Detailed response with code examples and resources for semantic caching, including Python examples and links to notebooks.",
+        "weight": 1.0
+    },
+    {
+        "category": "regression_examples",
+        "user_input": "In what sort of situations should I recommend a customer use semantic routing? Why would it be helpful for them?",
+        "thread_context": [
+            {
+                "user": "robert",
+                "text": "In what sort of situations should I recommend a customer use semantic routing? Why would it be helpful for them?"
+            },
+            {
+                "user": "haink",
+                "text": "You should recommend semantic routing to customers in situations where they need to direct user queries or actions based on the meaning (semantics) of the input, rather than just keywords or simple rules. Here's when and why it's helpful:\n• Dynamic query routing: If an application needs to route user requests to different data sources, indices, or services based on the intent or topic of the query (e.g., tech vs. sports vs. entertainment), semantic routing can automatically determine the best match.\n• Context-aware experiences: For GenAI apps or chatbots, semantic routing helps handle queries that change context or relevance, ensuring users get routed to the most appropriate response or workflow.\n• Reducing LLM calls: Semantic routers can add branching logic without needing extra LLM calls, which can save on cost and latency compared to always relying on a large language model for routing decisions.\n• Guardrails and compliance: You can use semantic routing to enforce topic boundaries or filter out-of-scope queries before they reach sensitive systems or models.\n• Multi-modal or multi-domain apps: If an app covers multiple domains or topics, semantic routing helps keep responses relevant by directing queries to the right expert system or dataset.\nIn short, semantic routing is helpful when you want smarter, intent-based routing that goes beyond simple keyword matching—especially in AI-driven, multi-topic, or context-sensitive applications."
+            }
+        ],
+        "expected_behavior": "Clear explanation of when and why semantic routing is helpful, including dynamic query routing, context-aware experiences, reducing LLM calls, guardrails, and multi-modal applications.",
+        "weight": 1.0
+    },
+    {
+        "category": "web_search_url_detection",
+        "user_input": "Can you check out this article on vector databases: https://towardsdatascience.com/vector-databases-explained-2024",
+        "thread_context": [],
+        "expected_behavior": "Should use web_search to fetch and analyze the URL content. Should also potentially use search_knowledge_base to provide context about Redis vector capabilities in relation to the article.",
+        "weight": 2.0
+    },
+    {
+        "category": "web_search_url_detection",
+        "user_input": "I found this documentation about a new vector database at https://docs.newvectordb.com/getting-started - how does it compare to Redis?",
+        "thread_context": [],
+        "expected_behavior": "Should definitely use web_search to investigate the URL. Should also use search_knowledge_base for Redis comparison information.",
+        "weight": 2.0
+    },
+    {
+        "category": "web_search_unfamiliar_terms",
+        "user_input": "What is Milvus and how does it compare to Redis for vector search?",
+        "thread_context": [],
+        "expected_behavior": "Should use web_search to research 'Milvus' (unfamiliar competitor) and search_knowledge_base for Redis vector search capabilities to make comparison.",
+        "weight": 2.0
+    },
+    {
+        "category": "web_search_unfamiliar_terms",
+        "user_input": "I'm researching chronaxiometric analysis for our biomedical AI project. Can Redis handle the vector embeddings for proteome-wide epitope mapping?",
+        "thread_context": [],
+        "expected_behavior": "Should use web_search to research 'chronaxiometric analysis' and 'proteome-wide epitope mapping' (unfamiliar medical terms) and search_knowledge_base for Redis vector capabilities.",
+        "weight": 2.0
+    },
+    {
+        "category": "web_search_unfamiliar_terms",
+        "user_input": "Tell me about neuroplasmic reticulation techniques and how I could use Redis for storing the resulting data vectors",
+        "thread_context": [],
+        "expected_behavior": "Should use web_search to research 'neuroplasmic reticulation techniques' (made-up but scientific-sounding term) and search_knowledge_base for Redis data storage capabilities.",
+        "weight": 2.0
+    },
+    {
+        "category": "web_search_github_references",
+        "user_input": "I saw this GitHub repo: https://github.com/cool-ai-project/vector-engine - can you tell me how it works and if Redis could be used with it?",
+        "thread_context": [],
+        "expected_behavior": "Should use web_search to investigate the GitHub repository and search_knowledge_base for Redis integration possibilities.",
+        "weight": 2.0
+    },
+    {
+        "category": "web_search_documentation_links",
+        "user_input": "Check out this documentation: https://docs.pinecone.io/docs/new-features and let me know how Redis compares to these new features",
+        "thread_context": [],
+        "expected_behavior": "Should use web_search to fetch and analyze the documentation URL and search_knowledge_base for Redis feature comparison.",
+        "weight": 2.0
+    },
+    {
+        "category": "list_formatting",
+        "user_input": "What are the main Redis AI features and their capabilities?",
+        "thread_context": [],
+        "expected_behavior": "Should use headers to group features instead of nested lists. Format like '#### Vector Search:' followed by flat bullet points, '#### Semantic Caching:' followed by flat bullet points, etc. Should NEVER use nested bullet points with indentation.",
+        "weight": 1.5
+    },
+    {
+        "category": "list_formatting",
+        "user_input": "Can you explain Redis vector search capabilities in detail?",
+        "thread_context": [],
+        "expected_behavior": "Should organize detailed information using headers (like '#### Performance:', '#### Algorithms:', '#### Use Cases:') followed by flat bullet lists. Must avoid nested bullet points completely.",
+        "weight": 1.5
+    },
+    {
+        "category": "list_formatting",
+        "user_input": "How do I set up semantic caching with Redis? What are the steps and considerations?",
+        "thread_context": [],
+        "expected_behavior": "Should organize setup information using headers to group related steps/considerations instead of nested lists. Example: '#### Setup Steps:', '#### Configuration Options:', '#### Best Practices:' with flat bullet points under each.",
+        "weight": 1.5
+    },
+    {
+        "category": "list_formatting",
+        "user_input": "Compare Redis vector search with other solutions like Pinecone and Weaviate",
+        "thread_context": [],
+        "expected_behavior": "Should organize comparison using headers for different aspects (like '#### Performance Comparison:', '#### Feature Comparison:', '#### Cost Comparison:') rather than nested bullet points for each solution.",
+        "weight": 1.5
+    }
+]

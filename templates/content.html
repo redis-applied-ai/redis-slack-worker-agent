@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Content Management - ETL Pipelines</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            text-align: center;
+        }
+
+        .nav {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .nav a {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+
+        .nav a:hover {
+            background-color: #0056b3;
+        }
+
+        .nav a.danger {
+            background-color: #dc3545;
+        }
+
+        .nav a.danger:hover {
+            background-color: #c82333;
+        }
+
+        .pipeline-section {
+            margin: 30px 0;
+            padding: 30px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            text-align: center;
+        }
+
+        .pipeline-section h2 {
+            margin-top: 0;
+            color: #495057;
+            margin-bottom: 20px;
+        }
+
+        .pipeline-section p {
+            color: #6c757d;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+            min-width: 200px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-ingest {
+            background-color: #28a745;
+        }
+
+        .btn-ingest:hover {
+            background-color: #218838;
+        }
+
+        .btn-vectorize {
+            background-color: #17a2b8;
+        }
+
+        .btn-vectorize:hover {
+            background-color: #138496;
+        }
+
+        .response {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            text-align: left;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .response.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .response.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-success {
+            background-color: #28a745;
+        }
+
+        .status-error {
+            background-color: #dc3545;
+        }
+
+        .status-pending {
+            background-color: #ffc107;
+        }
+
+        .form-section {
+            margin: 30px 0;
+            padding: 30px;
+            border: 2px solid #007bff;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+        }
+
+        .form-section h2 {
+            margin-top: 0;
+            color: #495057;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            border-color: #007bff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        .btn-add {
+            background-color: #007bff;
+        }
+
+        .btn-add:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Content Management - ETL Pipelines</h1>
+
+        <div class="nav">
+            <a href="/">Home</a>
+            <a href="/logout" class="danger">Logout</a>
+        </div>
+
+        <div class="form-section">
+            <h2>➕ Add New Content</h2>
+            <form id="addContentForm">
+                <div class="form-group">
+                    <label for="contentName">Content Name:</label>
+                    <input type="text" id="contentName" name="contentName" class="form-control"
+                        placeholder="e.g., redis-vector-db-tutorial" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="contentType">Content Type:</label>
+                    <select id="contentType" name="contentType" class="form-control" required>
+                        <option value="">Select a content type</option>
+                        <option value="blog">Blog Post</option>
+                        <option value="notebook">Jupyter Notebook</option>
+                        <option value="repo">GitHub Repository</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="contentUrl">Content URL:</label>
+                    <input type="url" id="contentUrl" name="contentUrl" class="form-control"
+                        placeholder="e.g., https://github.com/user/repo or https://blog.example.com/post" required>
+                </div>
+
+                <div style="text-align: center;">
+                    <button type="submit" id="addContentBtn" class="btn btn-add">
+                        <span class="status-indicator" id="addContentStatus"></span>
+                        Add & Process Content
+                    </button>
+                </div>
+            </form>
+            <div id="addContentResponse" class="response" style="display: none;"></div>
+        </div>
+
+        <div class="pipeline-section">
+            <h2>📥 Ingestion Pipeline</h2>
+            <p>
+                Downloads and processes content from the ETL ledger (repositories, blogs, notebooks).
+                Converts content to PDF format and uploads to S3 for further processing.
+            </p>
+            <button id="ingestBtn" class="btn btn-ingest" onclick="runIngestion()">
+                <span class="status-indicator" id="ingestStatus"></span>
+                Run Ingestion Pipeline
+            </button>
+            <div id="ingestResponse" class="response" style="display: none;"></div>
+        </div>
+
+        <div class="pipeline-section">
+            <h2>🔍 Vectorization Pipeline</h2>
+            <p>
+                Processes PDFs from S3, extracts text, creates embeddings, and stores them in the RAG index
+                for semantic search and retrieval.
+            </p>
+            <button id="vectorizeBtn" class="btn btn-vectorize" onclick="runVectorization()">
+                <span class="status-indicator" id="vectorizeStatus"></span>
+                Run Vectorization Pipeline
+            </button>
+            <div id="vectorizeResponse" class="response" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Get the Auth0 token from localStorage or sessionStorage
+        function getAuthToken() {
+            // In a real implementation, you'd get this from your Auth0 session
+            // For now, we'll use a placeholder
+            return localStorage.getItem('auth0_token') || 'your-auth0-token-here';
+        }
+
+        // Show response in the specified div
+        function showResponse(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `response ${isError ? 'error' : 'success'}`;
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+
+        // Update button status
+        function updateButtonStatus(buttonId, statusId, status) {
+            const button = document.getElementById(buttonId);
+            const statusIndicator = document.getElementById(statusId);
+
+            statusIndicator.className = `status-indicator status-${status}`;
+
+            if (status === 'pending') {
+                button.classList.add('loading');
+                button.disabled = true;
+            } else {
+                button.classList.remove('loading');
+                button.disabled = false;
+            }
+        }
+
+        // Make API request
+        async function makeApiRequest(url, method = 'GET', body = null) {
+            const token = getAuthToken();
+            const options = {
+                method: method,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            };
+
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || `HTTP ${response.status}`);
+                }
+
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Run ingestion pipeline
+        async function runIngestion() {
+            updateButtonStatus('ingestBtn', 'ingestStatus', 'pending');
+
+            try {
+                const result = await makeApiRequest('/api/content/ingest', 'POST');
+                showResponse('ingestResponse', result);
+                updateButtonStatus('ingestBtn', 'ingestStatus', 'success');
+            } catch (error) {
+                showResponse('ingestResponse', { error: error.message }, true);
+                updateButtonStatus('ingestBtn', 'ingestStatus', 'error');
+            }
+        }
+
+        // Run vectorization pipeline
+        async function runVectorization() {
+            updateButtonStatus('vectorizeBtn', 'vectorizeStatus', 'pending');
+
+            try {
+                const result = await makeApiRequest('/api/content/vectorize', 'POST');
+                showResponse('vectorizeResponse', result);
+                updateButtonStatus('vectorizeBtn', 'vectorizeStatus', 'success');
+            } catch (error) {
+                showResponse('vectorizeResponse', { error: error.message }, true);
+                updateButtonStatus('vectorizeBtn', 'vectorizeStatus', 'error');
+            }
+        }
+
+        // Add and process content
+        async function addContent(event) {
+            event.preventDefault();
+
+            const form = document.getElementById('addContentForm');
+            const formData = new FormData(form);
+
+            const contentData = {
+                name: formData.get('contentName'),
+                content_type: formData.get('contentType'),
+                content_url: formData.get('contentUrl')
+            };
+
+            updateButtonStatus('addContentBtn', 'addContentStatus', 'pending');
+
+            try {
+                const result = await makeApiRequest('/api/content/add', 'POST', contentData);
+                showResponse('addContentResponse', result);
+                updateButtonStatus('addContentBtn', 'addContentStatus', 'success');
+
+                // Reset form on success
+                form.reset();
+            } catch (error) {
+                showResponse('addContentResponse', { error: error.message }, true);
+                updateButtonStatus('addContentBtn', 'addContentStatus', 'error');
+            }
+        }
+
+        // Setup form event listener when page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('addContentForm').addEventListener('submit', addContent);
+        });
+    </script>
+</body>
+
+</html>

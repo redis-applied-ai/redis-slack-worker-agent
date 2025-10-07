@@ -1,0 +1,44 @@
+name: Evaluate Agent
+
+on:
+  push:
+    branches: [ ] # sample of eval flow not running for public setup
+  workflow_dispatch:
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Create virtual environment and install dependencies
+      run: |
+        uv venv
+        uv pip install -e .
+
+    - name: Run evaluation script
+      run: |
+        uv run python scripts/evaluate_agent.py --save-to-s3
+      env:
+        REDIS_URL: ${{ secrets.REDIS_URL }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        S3_EVAL_TEST_CASE_PATH: ${{ secrets.S3_EVAL_TEST_CASE_PATH }}

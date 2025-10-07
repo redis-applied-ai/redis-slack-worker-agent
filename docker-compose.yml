@@ -1,0 +1,140 @@
+services:
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "63799:6379"
+      - "8001:8001" # RedisInsight
+    volumes:
+      - redis_data:/data
+    environment:
+      - REDIS_ARGS=--save 60 1000
+    networks:
+      - ai-agent-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # OpenTelemetry Collector (simplified for local testing)
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+    environment:
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=slack-rag-bot
+    networks:
+      - ai-agent-network
+
+  agent-memory-server:
+    image: andrewbrookins510/agent-memory-server:0.9.3
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - LOG_LEVEL=INFO
+      - ENABLE_BACKGROUND_TASKS=true
+      - MAX_CONVERSATION_LENGTH=50
+      - MEMORY_CONSOLIDATION_ENABLED=true
+      - MEMORY_CONSOLIDATION_INTERVAL=3600
+      - AUTH_ENABLED=false
+      - LOCAL=${LOCAL:-true}
+      - CORS_ORIGINS=*
+      - WORKER_CONCURRENCY=4
+      - OTLP_ENDPOINT=http://otel-collector:4318
+    depends_on:
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - ai-agent-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/v1/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  memory-worker:
+    image: andrewbrookins510/agent-memory-server:0.9.3
+    command: [ "agent-memory", "task-worker" ]
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - LOG_LEVEL=INFO
+      - WORKER_CONCURRENCY=2
+      - MEMORY_CONSOLIDATION_ENABLED=true
+      - OTLP_ENDPOINT=http://otel-collector:4318
+    depends_on:
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - ai-agent-network
+
+  slack-app-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "3000:3000"
+    environment:
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - AGENT_MEMORY_SERVER_URL=http://agent-memory-server:8000
+      - OTLP_ENDPOINT=http://otel-collector:4318
+    depends_on:
+      redis:
+        condition: service_healthy
+      agent-memory-server:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - ai-agent-network
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+
+  slack-app-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      - AGENT_MEMORY_SERVER_URL=http://agent-memory-server:8000
+      - OTLP_ENDPOINT=http://otel-collector:4318
+    depends_on:
+      redis:
+        condition: service_healthy
+      agent-memory-server:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    networks:
+      - ai-agent-network
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+
+volumes:
+  redis_data:
+
+
+networks:
+  ai-agent-network:
+    driver: bridge
