@@ -1,18 +1,28 @@
-# Haink: An Applied AI Agent
+# Applied AI Agent
 
-A slack integrated agent built from scratch with async processing capabilities.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/redis-applied-ai/redis-slack-worker-agent)](https://github.com/redis-applied-ai/redis-slack-worker-agent/stargazers)
+![Language](https://img.shields.io/github/languages/top/redis-applied-ai/redis-slack-worker-agent)
+![GitHub last commit](https://img.shields.io/github/last-commit/redis-applied-ai/redis-slack-worker-agent)
+
+The code in this repo shows a reference architecture for a Slack-integrated agent application running on ECS. The architecture is designed so that agent workers can scale horizontally to demand while keeping a minimal API instance running. Additionally, it implements the [agent memory server](https://github.com/redis/agent-memory-server) as a tool call for storing and automatically summarizing and persisting short and long term memory to Redis.
+
+## Business objective
+
+Internally at Redis, this bot extends the Applied AI engineering team by assisting with basic code and answer generation from a curated knowledge base.
+
 
 ## Architecture
 
-![Application Architecture](resources/haink_application_architecture.png)
+![Application Architecture](resources/haink_task_flow.png)
 
-**Flow**: Slack → FastAPI webhook → Redis task queue → Docket workers → Agent engine → OpenAI → Response
+**TLDR Flow**: Slack → FastAPI webhook → Redis task queue → Agent workers pick up and execute tasks → Agent workers perform tool calls and schedule tasks until determining to respond and invoke Slack callback.
 
 ## Core Components
 
 - **FastAPI App**: Webhook handler with health checks
 - **Agent Engine**: ReAct methodology that runs search tools (curated AI team knowledge, internal Glean search, and web search via Tavily) in an agentic loop
-- **Agent memory**: Remembers past interactions with users via the [Agent Memory Server](https://github.com/redis/agent-memory-server). and personalizes responses
+- **Agent memory**: Remembers past interactions with users via the [Agent Memory Server](https://github.com/redis/agent-memory-server) and personalizes responses
 - **Docket Workers**: Background task processing with retry logic
 - **Redis**: Vector database (RedisVL) + streams-based task queue + caching
 
@@ -114,7 +124,7 @@ uv run python scripts/seed_tracking_index.py
 ![UI](resources/content_mgmt.png)
 ![UI2](resources/content_mgmt_ingest.png)
 
-Note: outside of local there is a dependency for auth0 to protect the endpoints which can be implemented with the following env variables and setting permissions for: `content:read`, `content:manage`, `content:process` in auth0.
+Note: Outside of local development, there is a dependency for Auth0 to protect the endpoints which can be implemented with the following env variables and setting permissions for: `content:read`, `content:manage`, `content:process` in Auth0.
 
 ```
 # Auth0 Configuration

@@ -1,6 +1,8 @@
 name: Python Tests (API)
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 

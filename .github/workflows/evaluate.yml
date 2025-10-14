@@ -1,8 +1,6 @@
 name: Evaluate Agent
 
 on:
-  push:
-    branches: [ ] # sample of eval flow not running for public setup
   workflow_dispatch:
 
 jobs:
