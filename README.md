@@ -95,6 +95,10 @@ TAVILY_API_KEY=your-tavily-key  # Web search tool
 REDIS_URL=redis://localhost:6379/0
 ```
 
+## Deployment
+
+Complete AWS infrastructure is defined in Terraform. See [`terraform/README.md`](terraform/README.md) for deployment instructions. Configure your `project_name` variable to customize resource naming.
+
 ## Testing
 
 ```bash
