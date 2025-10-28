@@ -19,11 +19,7 @@ from openai.types.chat.chat_completion_tool_message_param import (
 from redisvl.index.index import AsyncSearchIndex
 from redisvl.utils.vectorize import OpenAITextVectorizer
 
-from app.agent.tools import (
-    get_glean_search_tool,
-    get_search_knowledge_base_tool,
-    get_web_search_tool,
-)
+from app.agent.tools import get_search_knowledge_base_tool, get_web_search_tool
 from app.utilities.openai_client import get_instrumented_client
 
 logger = logging.getLogger(__name__)
@@ -334,7 +330,6 @@ async def answer_question(
     tools = [
         get_search_knowledge_base_tool(),
         get_web_search_tool(),
-        get_glean_search_tool(),
         *MemoryAPIClient.get_all_memory_tool_schemas(),
     ]
 

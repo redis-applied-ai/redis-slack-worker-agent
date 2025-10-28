@@ -21,7 +21,7 @@ Internally at Redis, this bot extends the Applied AI engineering team by assisti
 ## Core Components
 
 - **FastAPI App**: Webhook handler with health checks
-- **Agent Engine**: ReAct methodology that runs search tools (curated AI team knowledge, internal Glean search, and web search via Tavily) in an agentic loop
+- **Agent Engine**: ReAct methodology that runs search tools (curated AI team knowledge and web search via Tavily) in an agentic loop
 - **Agent memory**: Remembers past interactions with users via the [Agent Memory Server](https://github.com/redis/agent-memory-server) and personalizes responses
 - **Docket Workers**: Background task processing with retry logic
 - **Redis**: Vector database (RedisVL) + streams-based task queue + caching
@@ -31,7 +31,7 @@ Internally at Redis, this bot extends the Applied AI engineering team by assisti
 ### Prerequisites
 - Python 3.12+, Redis, UV package manager
 - Slack app credentials, OpenAI API key
-- Optional: Tavily API key for web search
+- Tavily API key for web search
 
 ### Development Setup
 ```bash
@@ -54,8 +54,6 @@ uv run python -m app.worker
 # Start API (Terminal 2)
 uv run fastapi dev app/api/main.py
 
-# Local otel collector (Optional Terminal 3)
-docker compose -f docker-compose.collector.yml up
 ```
 
 ### Local development with Slack
@@ -74,7 +72,7 @@ Additionally, if persisting answer feedback locally, update "Interactivity & Sho
 
 ## Usage
 
-**Slack**: Mention `@bot` in any channel. The bot processes questions using ReAct methodology with search tools (curated AI knowledge, internal docs with Glean, and web search).
+**Slack**: Mention `@bot` in any channel. The bot processes questions using ReAct methodology with search tools (curated AI knowledge and web search).
 
 **API**:
 - Health: `GET /health`
@@ -89,15 +87,132 @@ Essential environment variables:
 SLACK_BOT_TOKEN=xoxb-your-bot-token
 SLACK_SIGNING_SECRET=your-signing-secret
 OPENAI_API_KEY=your-openai-key
-
-# Optional
 TAVILY_API_KEY=your-tavily-key  # Web search tool
 REDIS_URL=redis://localhost:6379/0
 ```
 
-## Deployment
+## Deployment (AWS, single environment)
 
-Complete AWS infrastructure is defined in Terraform. See [`terraform/README.md`](terraform/README.md) for deployment instructions. Configure your `project_name` variable to customize resource naming.
+This reference deploys a working agent stack on AWS with a single `terraform apply`:
+VPC, ALB, ECS Fargate (API, Worker, Memory Server), ECR, S3, IAM, and basic CloudWatch.
+No domain or SSL is required; the ALB exposes HTTP for testing.
+
+Development environment requirements
+- Terraform v1.10 or later
+- AWS CLI configured with credentials
+- Docker (to build and push images)
+
+Prerequisites
+- AWS account with permissions for VPC, ECS (Fargate), ECR, ALB, IAM, S3, CloudWatch
+- Slack app credentials (bot token, signing secret)
+- OpenAI API key
+- Cloud-accessible Redis URL (e.g., Upstash or ElastiCache). Localhost will not work from ECS.
+- Tavily API key (web search)
+
+Terraform modules
+- VPC: networking, subnets, security groups
+- ECR: container repositories
+- ECS: Fargate cluster, API and worker services, Memory Server sidecar (separate service)
+- ALB: public Load Balancer routing to API and Memory Server health
+- S3: content bucket for uploads/examples
+- IAM: roles and policies for ECS/ECR/S3/SSM
+- Monitoring: CloudWatch dashboard and alarms (basic)
+
+Step 1) Configure minimal variables
+Create or edit `terraform/terraform.tfvars` (example):
+```hcl
+aws_region   = "us-east-1"
+project_name = "my-ai-agent"           # choose your own unique name
+bucket_name  = "my-ai-agent-content-1234"  # must be globally unique
+```
+
+Step 2) Seed required secrets into AWS SSM
+- Copy the example and fill in values: `cp .env.example .env && edit .env`
+- Then run the loader script to write SSM parameters under `/${project_name}/...`
+- IMPORTANT: Use a cloud Redis URL for `REDIS_URL` (not localhost)
+```bash
+set -a; source .env; \
+export PROJECT_NAME="my-ai-agent" AWS_REGION="us-east-1" \
+AGENT_MEMORY_SERVER_URL="http://agent-memory-server.local:8000"; \
+set +a; sh ./scripts/load_secrets.sh
+```
+See the full list of parameters in `terraform/SSM_PARAMETERS.md`.
+
+Step 3) Deploy the infrastructure
+Use the helper script or terraform directly:
+```bash
+# Using helper script
+./terraform/deploy.sh apply
+
+# Or manually
+terraform -chdir=terraform init
+terraform -chdir=terraform validate
+terraform -chdir=terraform plan -out=tfplan
+terraform -chdir=terraform apply tfplan
+```
+After apply, note the `application_url` output (ALB HTTP URL).
+
+Step 4) Build and push images to ECR
+
+**CRITICAL**: ECS Fargate runs on X86_64 (amd64) architecture. Always build with `--platform linux/amd64` to avoid "exec format error" failures.
+
+```bash
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+AWS_REGION=us-east-1
+ECR="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin "$ECR"
+
+# API (build for linux/amd64)
+docker build --platform linux/amd64 -f Dockerfile.api -t "$ECR/my-ai-agent-api:latest" .
+docker push "$ECR/my-ai-agent-api:latest"
+
+# Worker (build for linux/amd64)
+docker build --platform linux/amd64 -f Dockerfile.worker -t "$ECR/my-ai-agent-worker:latest" .
+docker push "$ECR/my-ai-agent-worker:latest"
+```
+
+**Note**: If you encounter "No space left on device" during `uv sync`, increase Docker Desktop disk allocation (Settings → Resources → Disk image size).
+
+**Optional - Test locally before pushing**:
+```bash
+# Verify architecture
+docker image inspect "$ECR/my-ai-agent-api:latest" --format '{{.Architecture}}'  # should show "amd64"
+
+# Quick smoke test (requires .env file)
+docker run --rm --env-file .env -p 3000:3000 "$ECR/my-ai-agent-api:latest" &
+sleep 5 && curl -sf http://localhost:3000/health && echo "✓ API health OK"
+docker stop $(docker ps -q --filter ancestor="$ECR/my-ai-agent-api:latest")
+
+# Verify git binary is present (prevents GitPython errors)
+docker run --rm "$ECR/my-ai-agent-worker:latest" git --version
+docker run --rm "$ECR/my-ai-agent-worker:latest" python -c "import git; print('GitPython OK')"
+```
+
+Step 5) Force ECS services to deploy latest images
+```bash
+aws ecs update-service --cluster my-ai-agent-cluster \
+  --service my-ai-agent-api-service --force-new-deployment
+aws ecs update-service --cluster my-ai-agent-cluster \
+  --service my-ai-agent-worker-service --force-new-deployment
+```
+
+Step 6) Verify health
+```bash
+APP_URL=$(terraform -chdir=terraform output -raw application_url)
+curl -i "$APP_URL/health"
+curl -i "$APP_URL/v1/health"
+```
+
+Step 7) Configure Slack and test
+- Event Subscriptions → Enable → Request URL: `<application_url>/slack/events`
+- Interactivity & Shortcuts → Enable → Request URL: `<application_url>/slack/interactive`
+- Subscribe to bot events (at minimum): `app_mention`, `message.channels`, `message.im`
+Test by mentioning the bot in a channel or DM.
+
+Cleanup
+```bash
+terraform -chdir=terraform destroy
+```
 
 ## Testing
 

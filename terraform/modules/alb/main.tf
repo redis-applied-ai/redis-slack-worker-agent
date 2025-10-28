@@ -2,16 +2,16 @@
 
 # Application Load Balancer
 resource "aws_lb" "main" {
-  name               = "${var.environment}-${var.project_name}-alb"
+  name               = "${var.project_name}-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [var.security_groups.alb]
   subnets            = var.subnets
 
-  enable_deletion_protection = var.environment == "prod" ? true : false
+  enable_deletion_protection = false
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-alb"
+    Name = "${var.project_name}-alb"
   }
 }
 
@@ -104,7 +104,7 @@ resource "aws_lb_listener_rule" "api_http" {
 
 # Target Group for API Service
 resource "aws_lb_target_group" "api" {
-  name        = "${var.environment}-${var.project_name}-api-tg"
+  name        = "${var.project_name}-api-tg"
   port        = 3000
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -123,13 +123,14 @@ resource "aws_lb_target_group" "api" {
   }
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-api-tg"
+    Name = "${var.project_name}-api-tg"
   }
 }
 
 # Target Group for Agent Memory Server
 resource "aws_lb_target_group" "memory_server" {
-  name        = "${var.environment}-agent-memory-server-tg"
+  # Keep the resource short to satisfy AWS 32-char limit for TG names
+  name        = "${var.project_name}-mem-tg"
   port        = 8000
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -148,7 +149,7 @@ resource "aws_lb_target_group" "memory_server" {
   }
 
   tags = {
-    Name = "${var.environment}-agent-memory-server-tg"
+    Name = "${var.project_name}-mem-tg"
   }
 }
 
@@ -192,10 +193,10 @@ resource "aws_lb_listener_rule" "memory_server_http" {
 
 # CloudWatch Log Group for ALB
 resource "aws_cloudwatch_log_group" "alb" {
-  name              = "/aws/applicationloadbalancer/${var.environment}-${var.project_name}"
+  name              = "/aws/applicationloadbalancer/${var.project_name}"
   retention_in_days = 7
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-alb-logs"
+    Name = "${var.project_name}-alb-logs"
   }
 }

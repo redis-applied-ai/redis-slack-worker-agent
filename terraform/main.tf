@@ -6,10 +6,9 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "applied-ai-agent"
-      Environment = var.environment
-      ManagedBy   = "terraform"
-      Repository  = "https://github.com/your-org/applied-ai-agent"
+      Project    = var.project_name
+      ManagedBy  = "terraform"
+      Repository = "https://github.com/redis-applied-ai/redis-slack-worker-agent"
     }
   }
 }
@@ -18,23 +17,105 @@ provider "aws" {
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-# VPC Module
+# Default VPC data (used when var.use_default_vpc=true)
+data "aws_vpc" "default" {
+  count   = var.use_default_vpc ? 1 : 0
+  default = true
+}
+
+data "aws_subnets" "default" {
+  count = var.use_default_vpc ? 1 : 0
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default[0].id]
+  }
+}
+
+# VPC Module (skipped when using default VPC)
 module "vpc" {
+  count  = var.use_default_vpc ? 0 : 1
   source = "./modules/vpc"
 
-  environment = var.environment
   project_name = var.project_name
-  vpc_cidr    = var.vpc_cidr
-  azs         = var.availability_zones
-  single_az   = var.single_az
+  vpc_cidr     = var.vpc_cidr
+  azs          = var.availability_zones
+  single_az    = var.single_az
+}
+
+# Security groups when using default VPC
+resource "aws_security_group" "alb_default" {
+  count  = var.use_default_vpc ? 1 : 0
+  name   = "${var.project_name}-alb"
+  vpc_id = data.aws_vpc.default[0].id
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "ecs_default" {
+  count  = var.use_default_vpc ? 1 : 0
+  name   = "${var.project_name}-ecs"
+  vpc_id = data.aws_vpc.default[0].id
+
+  ingress {
+    description     = "Application port"
+    from_port       = var.app_port
+    to_port         = var.app_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_default[0].id]
+  }
+
+  ingress {
+    description     = "Memory server port"
+    from_port       = var.memory_server_port
+    to_port         = var.memory_server_port
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_default[0].id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Common locals for networking
+locals {
+  vpc_id          = var.use_default_vpc ? data.aws_vpc.default[0].id : module.vpc[0].vpc_id
+  public_subnets  = var.use_default_vpc ? data.aws_subnets.default[0].ids : module.vpc[0].public_subnets
+  private_subnets = var.use_default_vpc ? data.aws_subnets.default[0].ids : module.vpc[0].private_subnets
+  security_groups = var.use_default_vpc ? {
+    alb = aws_security_group.alb_default[0].id
+    ecs = aws_security_group.ecs_default[0].id
+  } : module.vpc[0].security_groups
 }
 
 # ECR Module
 module "ecr" {
   source = "./modules/ecr"
 
-  environment = var.environment
-  project_name = var.project_name
   repositories = [
     var.project_name,
     "${var.project_name}-api",
@@ -47,42 +128,39 @@ module "ecr" {
 module "s3" {
   source = "./modules/s3"
 
-  environment = var.environment
-  bucket_name = var.bucket_name
+  project_name = var.project_name
+  bucket_name  = var.bucket_name
 }
 
 # Domain Module (if domain_name is provided)
 module "domain" {
-  count = var.domain_name != "" ? 1 : 0
+  count  = var.domain_name != "" ? 1 : 0
   source = "./modules/domain"
 
-  domain_name = var.domain_name
-  environment = var.environment
+  domain_name  = var.domain_name
   project_name = var.project_name
   alb_dns_name = module.alb.alb_dns_name
-  alb_zone_id = module.alb.alb_zone_id
+  alb_zone_id  = module.alb.alb_zone_id
 }
 
 # IAM Module
 module "iam" {
   source = "./modules/iam"
 
-  environment = var.environment
   project_name = var.project_name
-  account_id  = data.aws_caller_identity.current.account_id
-  region      = data.aws_region.current.name
-  bucket_name = var.bucket_name
+  account_id   = data.aws_caller_identity.current.account_id
+  region       = data.aws_region.current.name
+  bucket_name  = var.bucket_name
 }
 
 # ALB Module
 module "alb" {
   source = "./modules/alb"
 
-  environment = var.environment
-  project_name = var.project_name
-  vpc_id      = module.vpc.vpc_id
-  subnets     = module.vpc.public_subnets
-  security_groups = module.vpc.security_groups
+  project_name    = var.project_name
+  vpc_id          = local.vpc_id
+  subnets         = local.public_subnets
+  security_groups = local.security_groups
 
   # SSL configuration
   certificate_arn = var.domain_name != "" ? module.domain[0].certificate_arn : ""
@@ -93,18 +171,18 @@ module "alb" {
 module "ecs" {
   source = "./modules/ecs"
 
-  environment = var.environment
-  project_name = var.project_name
-  vpc_id      = module.vpc.vpc_id
-  subnets     = module.vpc.private_subnets
-  security_groups = module.vpc.security_groups
+  project_name    = var.project_name
+  vpc_id          = local.vpc_id
+  subnets         = local.private_subnets
+  security_groups = local.security_groups
+  assign_public_ip = var.use_default_vpc
 
   # ECR repositories
   ecr_repositories = module.ecr.repository_urls
 
   # IAM roles
   task_execution_role_arn = module.iam.ecs_task_execution_role_arn
-  task_role_arn          = module.iam.ecs_task_role_arn
+  task_role_arn           = module.iam.ecs_task_role_arn
 
   # S3 bucket
   s3_bucket_name = var.bucket_name
@@ -116,12 +194,12 @@ module "ecs" {
   environment_variables = var.environment_variables
 
   # Target groups (created by ALB module)
-  alb_api_target_group_arn = module.alb.api_target_group_arn
+  alb_api_target_group_arn           = module.alb.api_target_group_arn
   alb_memory_server_target_group_arn = module.alb.memory_server_target_group_arn
 
   # Auto scaling configuration
-  max_capacity = var.max_capacity
-  min_capacity = var.min_capacity
+  max_capacity     = var.max_capacity
+  min_capacity     = var.min_capacity
   desired_capacity = var.desired_capacity
 
   # Additional required variables
@@ -133,9 +211,8 @@ module "ecs" {
 module "monitoring" {
   source = "./modules/monitoring"
 
-  environment = var.environment
-  project_name = var.project_name
+  project_name     = var.project_name
   ecs_cluster_name = module.ecs.cluster_name
   ecs_service_name = module.ecs.api_service_name
-  alb_arn = module.alb.alb_arn
+  alb_arn          = module.alb.alb_arn
 }

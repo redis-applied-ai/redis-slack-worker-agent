@@ -2,7 +2,7 @@
 
 # ECS Task Execution Role
 resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "${var.environment}-${var.project_name}-ecs-task-execution-role"
+  name = "${var.project_name}-ecs-task-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -18,7 +18,7 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   })
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-ecs-task-execution-role"
+    Name = "${var.project_name}-ecs-task-execution-role"
   }
 }
 
@@ -30,7 +30,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 
 # ECS Task Execution Role Policy for SSM
 resource "aws_iam_policy" "ecs_task_execution_ssm_policy" {
-  name        = "${var.environment}-${var.project_name}-ecs-task-execution-ssm-policy"
+  name        = "${var.project_name}-ecs-task-execution-ssm-policy"
   description = "Policy for ECS task execution role to access SSM parameters"
 
   policy = jsonencode({
@@ -43,7 +43,7 @@ resource "aws_iam_policy" "ecs_task_execution_ssm_policy" {
           "ssm:GetParameter",
           "ssm:GetParametersByPath"
         ]
-        Resource = "arn:aws:ssm:${var.region}:${var.account_id}:parameter/${var.environment}/*"
+        Resource = "arn:aws:ssm:${var.region}:${var.account_id}:parameter/${var.project_name}/*"
       }
     ]
   })
@@ -56,7 +56,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_ssm_policy" {
 
 # ECS Task Execution Role Policy for CloudWatch Logs
 resource "aws_iam_policy" "ecs_task_execution_cloudwatch_policy" {
-  name        = "${var.environment}-${var.project_name}-ecs-task-execution-cloudwatch-policy"
+  name        = "${var.project_name}-ecs-task-execution-cloudwatch-policy"
   description = "Policy for ECS task execution role to create CloudWatch log groups and streams"
 
   policy = jsonencode({
@@ -84,7 +84,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_cloudwatch_policy"
 
 # ECS Task Role
 resource "aws_iam_role" "ecs_task_role" {
-  name = "${var.environment}-${var.project_name}-ecs-task-role"
+  name = "${var.project_name}-ecs-task-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -100,13 +100,13 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-ecs-task-role"
+    Name = "${var.project_name}-ecs-task-role"
   }
 }
 
 # ECS Task Role Policy for S3 Access
 resource "aws_iam_policy" "ecs_task_s3_policy" {
-  name        = "${var.environment}-${var.project_name}-ecs-task-s3-policy"
+  name        = "${var.project_name}-ecs-task-s3-policy"
   description = "Policy for ECS tasks to access S3 bucket"
 
   policy = jsonencode({
@@ -136,7 +136,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_s3_policy" {
 
 # ECS Task Role Policy for CloudWatch
 resource "aws_iam_policy" "ecs_task_cloudwatch_policy" {
-  name        = "${var.environment}-${var.project_name}-ecs-task-cloudwatch-policy"
+  name        = "${var.project_name}-ecs-task-cloudwatch-policy"
   description = "Policy for ECS tasks to write to CloudWatch"
 
   policy = jsonencode({
@@ -164,7 +164,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_cloudwatch_policy" {
 
 # ECS Task Role Policy for X-Ray
 resource "aws_iam_policy" "ecs_task_xray_policy" {
-  name        = "${var.environment}-${var.project_name}-ecs-task-xray-policy"
+  name        = "${var.project_name}-ecs-task-xray-policy"
   description = "Policy for ECS tasks to write to X-Ray"
 
   policy = jsonencode({
@@ -189,7 +189,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_xray_policy" {
 
 # ECS Task Role Policy for ECR
 resource "aws_iam_policy" "ecs_task_ecr_policy" {
-  name        = "${var.environment}-${var.project_name}-ecs-task-ecr-policy"
+  name        = "${var.project_name}-ecs-task-ecr-policy"
   description = "Policy for ECS tasks to pull from ECR"
 
   policy = jsonencode({
@@ -216,7 +216,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_ecr_policy" {
 
 # ECS Auto Scaling Role
 resource "aws_iam_role" "ecs_autoscaling_role" {
-  name = "${var.environment}-${var.project_name}-ecs-autoscaling-role"
+  name = "${var.project_name}-ecs-autoscaling-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -232,7 +232,7 @@ resource "aws_iam_role" "ecs_autoscaling_role" {
   })
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-ecs-autoscaling-role"
+    Name = "${var.project_name}-ecs-autoscaling-role"
   }
 }
 

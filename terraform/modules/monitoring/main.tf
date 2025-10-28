@@ -4,7 +4,7 @@
 
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
-  dashboard_name = "${var.environment}-${var.project_name}-dashboard"
+  dashboard_name = "${var.project_name}-dashboard"
 
   dashboard_body = jsonencode({
     widgets = [
@@ -22,7 +22,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           ]
           view    = "timeSeries"
           stacked = false
-          region  = "us-east-2"
+          region  = "us-east-1"
           title   = "ECS Service Metrics"
           period  = 300
         }
@@ -44,7 +44,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           ]
           view    = "timeSeries"
           stacked = false
-          region  = "us-east-2"
+          region  = "us-east-1"
           title   = "ALB Metrics"
           period  = 300
         }
@@ -55,7 +55,7 @@ resource "aws_cloudwatch_dashboard" "main" {
 
 # CloudWatch Alarms
 resource "aws_cloudwatch_metric_alarm" "high_cpu" {
-  alarm_name          = "${var.environment}-${var.project_name}-high-cpu"
+  alarm_name          = "${var.project_name}-high-cpu"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
@@ -72,12 +72,12 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
   }
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-high-cpu"
+    Name = "${var.project_name}-high-cpu"
   }
 }
 
 resource "aws_cloudwatch_metric_alarm" "high_memory" {
-  alarm_name          = "${var.environment}-${var.project_name}-high-memory"
+  alarm_name          = "${var.project_name}-high-memory"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "MemoryUtilization"
@@ -94,12 +94,12 @@ resource "aws_cloudwatch_metric_alarm" "high_memory" {
   }
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-high-memory"
+    Name = "${var.project_name}-high-memory"
   }
 }
 
 resource "aws_cloudwatch_metric_alarm" "high_response_time" {
-  alarm_name          = "${var.environment}-${var.project_name}-high-response-time"
+  alarm_name          = "${var.project_name}-high-response-time"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "TargetResponseTime"
@@ -115,12 +115,12 @@ resource "aws_cloudwatch_metric_alarm" "high_response_time" {
   }
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-high-response-time"
+    Name = "${var.project_name}-high-response-time"
   }
 }
 
 resource "aws_cloudwatch_metric_alarm" "high_error_rate" {
-  alarm_name          = "${var.environment}-${var.project_name}-high-error-rate"
+  alarm_name          = "${var.project_name}-high-error-rate"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "HTTPCode_Target_5XX_Count"
@@ -136,6 +136,6 @@ resource "aws_cloudwatch_metric_alarm" "high_error_rate" {
   }
 
   tags = {
-    Name = "${var.environment}-${var.project_name}-high-error-rate"
+    Name = "${var.project_name}-high-error-rate"
   }
 }

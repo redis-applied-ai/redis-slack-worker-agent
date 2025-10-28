@@ -5,7 +5,7 @@ resource "aws_s3_bucket" "main" {
   bucket = var.bucket_name
 
   tags = {
-    Name = "${var.environment}-applied-ai-agent-content"
+    Name = "${var.project_name}-content"
   }
 }
 

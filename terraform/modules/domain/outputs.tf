@@ -6,8 +6,8 @@ output "certificate_arn" {
 }
 
 output "domain_name" {
-  description = "Full domain name for the environment"
-  value       = "${var.environment}-applied-ai-agent.${var.domain_name}"
+  description = "Full domain name for the project"
+  value       = "${var.project_name}.${var.domain_name}"
 }
 
 output "hosted_zone_id" {

@@ -1,39 +1,34 @@
 # Variables for Applied AI Agent Terraform configuration
 
 variable "project_name" {
-  description = "Project name prefix for all resources (e.g., 'my-ai-agent'). Reserved: 'applied-ai-agent-worker' is reserved for the Applied AI team."
+  description = "Project name prefix for all resources (e.g., 'applied-ai-agent-worker')."
   type        = string
-  validation {
-    condition     = !startswith(var.project_name, "applied-ai-agent-worker")
-    error_message = "Project name cannot start with 'applied-ai-agent-worker' as it is reserved for the Applied AI team."
-  }
+  default     = "applied-ai-agent-worker"
 }
 
 variable "aws_region" {
   description = "AWS region for resources"
   type        = string
-  default     = "us-east-2"
+  default     = "us-east-1"
 }
 
-variable "environment" {
-  description = "Environment name (dev, stage, prod)"
-  type        = string
-  validation {
-    condition     = contains(["dev", "stage", "prod"], var.environment)
-    error_message = "Environment must be one of: dev, stage, prod."
-  }
+# Network selection
+variable "use_default_vpc" {
+  description = "Use the account's default VPC and its subnets instead of creating a new VPC"
+  type        = bool
+  default     = false
 }
 
 variable "vpc_cidr" {
-  description = "CIDR block for VPC"
+  description = "CIDR block for VPC (ignored when use_default_vpc=true)"
   type        = string
   default     = "10.0.0.0/16"
 }
 
 variable "availability_zones" {
-  description = "List of availability zones"
+  description = "List of availability zones (ignored when use_default_vpc=true)"
   type        = list(string)
-  default     = ["us-east-2a", "us-east-2b"]
+  default     = ["us-east-1a", "us-east-1b"]
 }
 
 variable "bucket_name" {
@@ -99,7 +94,7 @@ variable "memory_units" {
 
 # Cost optimization flags
 variable "single_az" {
-  description = "Use single AZ for cost optimization"
+  description = "Use single AZ for cost optimization (ignored when use_default_vpc=true)"
   type        = bool
   default     = false
 }

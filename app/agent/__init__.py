@@ -19,11 +19,8 @@ from .tasks import *
 
 # Re-export all tools
 from .tools import (
-    GleanSearchService,
-    get_glean_service,
     get_search_tool_config,
     perform_web_search,
-    search_glean,
     search_knowledge_base,
     search_knowledge_base_with_metadata,
 )
@@ -38,11 +35,8 @@ __all__ = [
     "is_brief_satisfied_response",
     "SYSTEM_PROMPT",
     # Tool functions
-    "GleanSearchService",
-    "get_glean_service",
     "get_search_tool_config",
     "perform_web_search",
-    "search_glean",
     "search_knowledge_base",
     "search_knowledge_base_with_metadata",
     # All task functions are available via the wildcard import

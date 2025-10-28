@@ -1,9 +1,5 @@
 # Variables for ECS Module
 
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
 
 variable "project_name" {
   description = "Project name prefix for resources"
@@ -26,6 +22,12 @@ variable "security_groups" {
     alb = string
     ecs = string
   })
+}
+
+variable "assign_public_ip" {
+  description = "Whether to assign public IPs to ECS tasks"
+  type        = bool
+  default     = false
 }
 
 variable "ecr_repositories" {

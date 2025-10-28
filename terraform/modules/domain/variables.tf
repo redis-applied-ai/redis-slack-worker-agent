@@ -5,14 +5,6 @@ variable "domain_name" {
   type        = string
 }
 
-variable "environment" {
-  description = "Environment name (dev, stage, prod)"
-  type        = string
-  validation {
-    condition     = contains(["dev", "stage", "prod"], var.environment)
-    error_message = "Environment must be one of: dev, stage, prod."
-  }
-}
 
 variable "project_name" {
   description = "Project name prefix for resources"

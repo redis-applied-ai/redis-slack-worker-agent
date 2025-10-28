@@ -3,22 +3,22 @@
 # VPC Outputs
 output "vpc_id" {
   description = "ID of the VPC"
-  value       = module.vpc.vpc_id
+  value       = local.vpc_id
 }
 
 output "vpc_cidr_block" {
   description = "CIDR block of the VPC"
-  value       = module.vpc.vpc_cidr_block
+  value       = var.use_default_vpc ? data.aws_vpc.default[0].cidr_block : module.vpc[0].vpc_cidr_block
 }
 
 output "private_subnets" {
   description = "List of private subnet IDs"
-  value       = module.vpc.private_subnets
+  value       = local.private_subnets
 }
 
 output "public_subnets" {
   description = "List of public subnet IDs"
-  value       = module.vpc.public_subnets
+  value       = local.public_subnets
 }
 
 # ECS Outputs
@@ -100,7 +100,7 @@ output "application_url" {
 
 # Domain outputs
 output "domain_name" {
-  description = "Full domain name for the environment"
+  description = "Full domain name for the project"
   value       = var.domain_name != "" ? module.domain[0].domain_name : null
 }
 

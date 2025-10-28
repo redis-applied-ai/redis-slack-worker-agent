@@ -4,7 +4,7 @@
 resource "aws_ecr_repository" "repositories" {
   for_each = toset(var.repositories)
 
-  name                 = "${var.environment}-${each.key}"
+  name                 = each.key
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -16,15 +16,16 @@ resource "aws_ecr_repository" "repositories" {
   }
 
   tags = {
-    Name = "${var.environment}-${each.key}"
+    Name = each.key
   }
 }
 
-# ECR Lifecycle Policy
+# ECR Lifecycle Policy (explicitly depend on created repos)
 resource "aws_ecr_lifecycle_policy" "repositories" {
   for_each = toset(var.repositories)
 
-  repository = "${var.environment}-${each.key}"
+  # Reference the repository resource to ensure proper dependency ordering
+  repository = aws_ecr_repository.repositories[each.key].name
 
   policy = jsonencode({
     rules = [

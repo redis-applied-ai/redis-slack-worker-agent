@@ -8,7 +8,7 @@ data "aws_route53_zone" "main" {
 
 # ACM Certificate for the subdomain
 resource "aws_acm_certificate" "main" {
-  domain_name       = "${var.environment}-${var.project_name}.${var.domain_name}"
+  domain_name       = "${var.project_name}.${var.domain_name}"
   validation_method = "DNS"
 
   lifecycle {
@@ -16,9 +16,8 @@ resource "aws_acm_certificate" "main" {
   }
 
   tags = {
-    Name        = "${var.environment}-${var.project_name}-cert"
-    Environment = var.environment
-    Project     = var.project_name
+    Name    = "${var.project_name}-cert"
+    Project = var.project_name
   }
 }
 
@@ -53,7 +52,7 @@ resource "aws_acm_certificate_validation" "main" {
 # ALB DNS record
 resource "aws_route53_record" "alb" {
   zone_id = data.aws_route53_zone.main.zone_id
-  name    = "${var.environment}-${var.project_name}.${var.domain_name}"
+  name    = "${var.project_name}.${var.domain_name}"
   type    = "A"
 
   alias {
