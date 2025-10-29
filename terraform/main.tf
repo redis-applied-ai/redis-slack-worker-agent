@@ -93,6 +93,15 @@ resource "aws_security_group" "ecs_default" {
     security_groups = [aws_security_group.alb_default[0].id]
   }
 
+  # Allow ECS services to talk to the memory server over the internal network
+  ingress {
+    description = "ECS inter-service access to memory server"
+    from_port   = var.memory_server_port
+    to_port     = var.memory_server_port
+    protocol    = "tcp"
+    self        = true
+  }
+
   egress {
     from_port   = 0
     to_port     = 0

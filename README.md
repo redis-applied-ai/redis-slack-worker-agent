@@ -103,6 +103,7 @@ Development environment requirements
 - Terraform v1.10 or later
 - AWS CLI configured with credentials
 - Docker (to build and push images)
+- Agent Memory Server [credentials](https://redis.github.io/agent-memory-server/authentication/?h=secret#token-management-commands)
 
 Prerequisites
 - AWS account with permissions for VPC, ECS (Fargate), ECR, ALB, IAM, S3, CloudWatch
@@ -134,8 +135,11 @@ Step 2) Seed required secrets into AWS SSM
 - IMPORTANT: Use a cloud Redis URL for `REDIS_URL` (not localhost)
 ```bash
 set -a; source .env; \
-export PROJECT_NAME="my-ai-agent" AWS_REGION="us-east-1" \
-AGENT_MEMORY_SERVER_URL="http://agent-memory-server.local:8000"; \
+export PROJECT_NAME="my-ai-agent" AWS_REGION="us-east-1"; \
+# Required for cloud: set a token and the base URL the app will call
+export AGENT_MEMORY_SERVER_API_KEY="generate-a-strong-token"; \
+# Get ALB DNS dynamically (ALB routes /v1/* to memory server):
+export AGENT_MEMORY_SERVER_URL="http://$(terraform -chdir=terraform output -raw alb_dns_name)"; \
 set +a; sh ./scripts/load_secrets.sh
 ```
 See the full list of parameters in `terraform/SSM_PARAMETERS.md`.

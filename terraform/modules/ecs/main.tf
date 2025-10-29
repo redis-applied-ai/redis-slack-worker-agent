@@ -26,28 +26,30 @@ resource "aws_service_discovery_private_dns_namespace" "main" {
 }
 
 # Service Discovery Service for Agent Memory Server
-resource "aws_service_discovery_service" "agent_memory_server" {
-  name = "agent-memory-server"
-
-  dns_config {
-    namespace_id = aws_service_discovery_private_dns_namespace.main.id
-
-    dns_records {
-      ttl  = 60
-      type = "A"
-    }
-
-    routing_policy = "MULTIVALUE"
-  }
-
-  health_check_custom_config {
-    failure_threshold = 3
-  }
-
-  tags = {
-    Name = "${var.project_name}-agent-memory-server-discovery"
-  }
-}
+# Note: This resource is managed externally to avoid conflicts with running instances
+# Uncomment and manage if needed, but be aware that deletion requires all instances to be deregistered first
+# resource "aws_service_discovery_service" "agent_memory_server" {
+#   name = "agent-memory-server"
+#
+#   dns_config {
+#     namespace_id = aws_service_discovery_private_dns_namespace.main.id
+#
+#     dns_records {
+#       ttl  = 60
+#       type = "A"
+#     }
+#
+#     routing_policy = "MULTIVALUE"
+#   }
+#
+#   health_check_custom_config {
+#     failure_threshold = 3
+#   }
+#
+#   tags = {
+#     Name = "${var.project_name}-agent-memory-server-discovery"
+#   }
+# }
 
 
 # CloudWatch Log Group for API Service
@@ -140,7 +142,7 @@ resource "aws_ecs_task_definition" "memory_server" {
         },
         {
           name  = "DISABLE_AUTH"
-          value = "false"
+          value = "true"
         },
         {
           name  = "CORS_ORIGINS"
@@ -164,6 +166,10 @@ resource "aws_ecs_task_definition" "memory_server" {
         {
           name      = "TAVILY_API_KEY"
           valueFrom = "arn:aws:ssm:${var.region}:${var.account_id}:parameter/${var.project_name}/tavily/api_key"
+        },
+        {
+          name      = "AGENT_MEMORY_SERVER_API_KEY"
+          valueFrom = "arn:aws:ssm:${var.region}:${var.account_id}:parameter/${var.project_name}/agent-memory-server/api-key"
         }
       ]
 
@@ -229,6 +235,10 @@ resource "aws_ecs_task_definition" "memory_server" {
         {
           name      = "TAVILY_API_KEY"
           valueFrom = "arn:aws:ssm:${var.region}:${var.account_id}:parameter/${var.project_name}/tavily/api_key"
+        },
+        {
+          name      = "AGENT_MEMORY_SERVER_API_KEY"
+          valueFrom = "arn:aws:ssm:${var.region}:${var.account_id}:parameter/${var.project_name}/agent-memory-server/api-key"
         }
       ]
 
@@ -259,10 +269,11 @@ resource "aws_ecs_service" "memory_server" {
 
   enable_execute_command = true
 
-  # Register this service into Cloud Map for in-cluster DNS discovery
-  service_registries {
-    registry_arn = aws_service_discovery_service.agent_memory_server.arn
-  }
+  # Note: Service discovery is managed externally to avoid conflicts with running instances
+  # Uncomment if needed:
+  # service_registries {
+  #   registry_arn = aws_service_discovery_service.agent_memory_server.arn
+  # }
 
   network_configuration {
     subnets          = var.subnets
@@ -299,7 +310,7 @@ resource "aws_ecs_task_definition" "api" {
   container_definitions = jsonencode([
     {
       name    = "${var.project_name}-api"
-      image   = "${var.ecr_repositories["${var.project_name}-api"]}:amd64"
+      image   = "${var.ecr_repositories["${var.project_name}-api"]}:latest"
       cpu     = var.api_cpu_units
       memory  = var.api_memory_units
       command = ["python", "-m", "uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "3000"]
@@ -417,7 +428,7 @@ resource "aws_ecs_task_definition" "worker" {
   container_definitions = jsonencode([
     {
       name      = "${var.project_name}-worker"
-      image     = "${var.ecr_repositories["${var.project_name}-worker"]}:amd64"
+      image     = "${var.ecr_repositories["${var.project_name}-worker"]}:latest"
       cpu       = var.worker_cpu_units
       memory    = var.worker_memory_units
       essential = true

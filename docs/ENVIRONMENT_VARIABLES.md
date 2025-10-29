@@ -37,7 +37,8 @@ This document lists all environment variables used by the application, with focu
 | Variable | Description | Example | Required |
 |----------|-------------|---------|----------|
 | `TAVILY_API_KEY` | Tavily API key for web search | `tvly-...` | No |
-| `AGENT_MEMORY_SERVER_URL` | Agent memory server URL | `http://localhost:8000` | No |
+| `AGENT_MEMORY_SERVER_URL` | Agent Memory Server base URL (Cloud Map or ALB) | `http://agent-memory-server.local:8000` or `http://<alb-dns>` | Yes (in cloud) |
+| `AGENT_MEMORY_SERVER_API_KEY` | Token for Memory Server when auth is enabled | `your-strong-token` | Yes (in cloud) |
 
 
 ## Environment-Specific Examples

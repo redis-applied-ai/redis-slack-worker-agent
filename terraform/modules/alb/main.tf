@@ -174,7 +174,7 @@ resource "aws_lb_listener_rule" "memory_server" {
 
 # Listener Rule for Agent Memory Server (HTTP fallback)
 resource "aws_lb_listener_rule" "memory_server_http" {
-  count = var.certificate_arn == "" ? 1 : 0
+  count = var.certificate_arn == null || var.certificate_arn == "" ? 1 : 0
 
   listener_arn = aws_lb_listener.http_fallback[0].arn
   priority     = 50

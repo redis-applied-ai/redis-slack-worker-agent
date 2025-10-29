@@ -98,6 +98,12 @@ output "application_url" {
   value       = var.domain_name != "" ? "https://${module.domain[0].domain_name}" : "http://${module.alb.alb_dns_name}"
 }
 
+# Memory Server URL (via ALB)
+output "memory_server_url" {
+  description = "URL of the Agent Memory Server (via ALB /v1 routing). Use this for AGENT_MEMORY_SERVER_URL in SSM."
+  value       = var.domain_name != "" ? "https://${module.domain[0].domain_name}" : "http://${module.alb.alb_dns_name}"
+}
+
 # Domain outputs
 output "domain_name" {
   description = "Full domain name for the project"
