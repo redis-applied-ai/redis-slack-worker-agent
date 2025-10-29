@@ -5,7 +5,7 @@
 ![Language](https://img.shields.io/github/languages/top/redis-applied-ai/redis-slack-worker-agent)
 ![GitHub last commit](https://img.shields.io/github/last-commit/redis-applied-ai/redis-slack-worker-agent)
 
-The code in this repo shows a reference architecture for a Slack-integrated agent application running on ECS. The architecture is designed so that agent workers can scale horizontally to demand while keeping a minimal API instance running. Additionally, it implements the [agent memory server](https://github.com/redis/agent-memory-server) as a tool call for storing and automatically summarizing and persisting short and long term memory to Redis.
+The code in this repo shows a reference architecture for a Slack-integrated agent application running on ECS. The architecture is designed so that agent workers, API containers, and agent-memory-server can scale in a decoupled way. [The agent memory server](https://github.com/redis/agent-memory-server) itself is implemented as a tool call for storing and automatically summarizing and persisting short and long term memories.
 
 ## Business objective
 
@@ -16,15 +16,15 @@ Internally at Redis, this bot extends the Applied AI engineering team by assisti
 
 ![Application Architecture](resources/haink_task_flow.png)
 
-**TLDR Flow**: Slack → FastAPI webhook → Redis task queue → Agent workers pick up and execute tasks → Agent workers perform tool calls and schedule tasks until determining to respond and invoke Slack callback.
+**TLDR Flow**: Slack → FastAPI webhook → Redis task queue → Agent workers pick up and execute tasks → Agent workers perform tool calls and ReAct style execution -> invoke Slack callbacks async.
 
 ## Core Components
 
-- **FastAPI App**: Webhook handler with health checks
-- **Agent Engine**: ReAct methodology that runs search tools (curated AI team knowledge and web search via Tavily) in an agentic loop
-- **Agent memory**: Remembers past interactions with users via the [Agent Memory Server](https://github.com/redis/agent-memory-server) and personalizes responses
-- **Docket Workers**: Background task processing with retry logic
-- **Redis**: Vector database (RedisVL) + streams-based task queue + caching
+- **FastAPI App**: Webhook handler.
+- **Agent Engine**: ReAct methodology runs search tools in an agentic loop.
+- **Agent memory**: Remembers past interactions with users via the [Agent Memory Server](https://github.com/redis/agent-memory-server).
+- **Docket Workers**: Core task processing utility.
+- **Redis**: Vector database + streams-based task queue + memory store.
 
 ## Quick Start
 
@@ -56,17 +56,19 @@ uv run fastapi dev app/api/main.py
 
 ```
 
-### Local development with Slack
+### Development with Slack
 
-To test local changes in Slack, you can run an ngrok server locally and then connect Slack to the ngrok endpoint that proxies to your local machine.
+To test changes in Slack, you can run an ngrok server locally or setup with ALB with terraform (see below) and then connect Slack to the respective endpoint.
 
-First, run ngrok:
+For ngrok, run:
 
 ```bash
 ngrok http 8000
 ```
 
 Then, in the Slack API console, update "Event Subscriptions -> Request URL" with the proxy URL ngrok gives you. It will look like `https://<ngrok proxy>/slack/events` (e.g.: `https://3cfaf9a1bcff.ngrok-free.app/slack/events`).
+
+![Application Architecture](resources/slack_subscription.png)
 
 Additionally, if persisting answer feedback locally, update "Interactivity & Shortcuts -> Request URL" with the URL `https://<ngrok proxy>/slack/interactive`.
 
@@ -208,6 +210,8 @@ Step 7) Configure Slack and test
 - Interactivity & Shortcuts → Enable → Request URL: `<application_url>/slack/interactive`
 - Subscribe to bot events (at minimum): `app_mention`, `message.channels`, `message.im`
 Test by mentioning the bot in a channel or DM.
+
+> See Development with Slack section for visual on how to update this value.
 
 Cleanup
 ```bash

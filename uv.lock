@@ -717,19 +717,6 @@ wheels = [
 ]
 
 [[package]]
-name = "glean-api-client"
-version = "0.6.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/cb/99/da764595c6c8a649b64eace71d7f75ff6fe610a65b7d26a82f8a339e75ef/glean_api_client-0.6.6.tar.gz", hash = "sha256:77f8292781caf1576119549ed5b8832108b21b97b5d399becf37b7a9a99af5a2", size = 219942, upload-time = "2025-06-16T19:08:16.328Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4b/19/67756bb340354ede358fabff2d7793153a16f8ae20a1025e7ef5f0ba8e5f/glean_api_client-0.6.6-py3-none-any.whl", hash = "sha256:88caf5120fc25e00770739874ed3b6236fd6aa5866cd5c74e9d6258fbeefa32a", size = 463201, upload-time = "2025-06-16T19:08:14.837Z" },
-]
-
-[[package]]
 name = "graphviz"
 version = "0.20.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2906,7 +2893,6 @@ dependencies = [
     { name = "click" },
     { name = "fastapi", extra = ["standard"] },
     { name = "gitpython" },
-    { name = "glean-api-client" },
     { name = "httpx" },
     { name = "jinja2" },
     { name = "langchain" },
@@ -2953,7 +2939,6 @@ requires-dist = [
     { name = "click", specifier = ">=8.0.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.104.0" },
     { name = "gitpython", specifier = ">=3.1.0" },
-    { name = "glean-api-client", specifier = ">=0.6.0" },
     { name = "httpx", specifier = ">=0.25.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "langchain", specifier = ">=0.3.25" },
