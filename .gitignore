@@ -192,5 +192,4 @@ ai
 TASK_MEMORY.md
 .env*
 
-terraform/
 infra/

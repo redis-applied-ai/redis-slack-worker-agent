@@ -183,14 +183,12 @@ class TestRAGFunctions:
     @pytest.mark.asyncio
     @patch("app.agent.tools.search_knowledge_base.search_knowledge_base")
     @patch("app.agent.tools.web_search.perform_web_search")
-    @patch("app.agent.tools.glean_search.search_glean")
     @patch("app.agent.create_initial_message_without_search")
     @patch("app.agent.core.get_instrumented_client")
     async def test_answer_question_success(
         self,
         mock_get_instrumented_client,
         mock_create_initial_message_without_search,
-        mock_search_glean,
         mock_web_search,
         mock_knowledge_search,
     ):
@@ -214,7 +212,6 @@ class TestRAGFunctions:
         # Mock tool functions
         mock_knowledge_search.return_value = "Knowledge base search results"
         mock_web_search.return_value = "Web search results"
-        mock_search_glean.return_value = "Glean search results"
 
         # Mock response
         mock_response = Mock()

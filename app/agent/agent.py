@@ -19,7 +19,7 @@ from .core import (
 from .tasks import *
 
 # Re-export all tools
-from .tools import get_glean_search_tool, get_search_tool, get_web_search_tool
+from .tools import get_search_knowledge_base_tool, get_web_search_tool
 
 # For backward compatibility, also export the main functions directly
 __all__ = [
@@ -31,8 +31,7 @@ __all__ = [
     "is_brief_satisfied_response",
     "retrieve_context",
     # Tool functions
-    "get_search_tool",
+    "get_search_knowledge_base_tool",
     "get_web_search_tool",
-    "get_glean_search_tool",
     # All task functions are available via the wildcard import
 ]

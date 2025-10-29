@@ -1,12 +1,9 @@
 import logging
 from typing import Optional
 
-from opentelemetry import trace
-
 from app.utilities.metrics import get_token_metrics
 
 logger = logging.getLogger(__name__)
-tracer = trace.get_tracer(__name__)
 
 
 class InstrumentedOpenAIClient:

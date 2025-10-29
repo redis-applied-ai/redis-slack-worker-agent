@@ -17,7 +17,6 @@ Important: DO NOT USE Redis Stack or other earlier versions of Redis.
 - `tasks.py`: Task definitions with retry logic
 - `rag.py`: RedisVL vector search + OpenAI generation
 - `web_search.py`: Tavily API integration
-- `glean_search.py`: Enterprise knowledge search
 - `db.py`: Vector index management
 
 ### Pipeline System (`pipelines/`)
