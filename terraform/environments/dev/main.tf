@@ -7,7 +7,6 @@ module "applied_ai_agent" {
   # This makes it easy to see and update all non-secret values
 
   # Pass all variables from terraform.tfvars
-  environment                = var.environment
   aws_region                 = var.aws_region
   vpc_cidr                   = var.vpc_cidr
   availability_zones         = var.availability_zones

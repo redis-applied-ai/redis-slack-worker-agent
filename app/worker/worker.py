@@ -13,6 +13,8 @@ from datetime import timedelta
 from docket import Worker
 from dotenv import load_dotenv
 
+from app.utilities.logging_config import ensure_stdout_logging
+
 # Set up logging for the worker
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,9 @@ load_dotenv()
 
 async def main():
     """Run the Docket worker."""
+    # Ensure logs go to stdout with a sane default
+    ensure_stdout_logging()
+
     redis_url = os.environ.get("REDIS_URL")
 
     if not redis_url:
@@ -64,6 +69,21 @@ async def main():
         error_msg = f"Failed to initialize telemetry: {e}"
         print(f"⚠️  {error_msg}")
         logger.warning(error_msg)
+
+    # Log LLM provider/model at worker startup
+    try:
+        provider = os.getenv("LLM_PROVIDER", "bedrock").lower()
+        if provider == "bedrock":
+            model = os.getenv(
+                "BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0"
+            )
+        else:
+            model = os.getenv("OPENAI_CHAT_MODEL", "gpt-4.1")
+        logger.info(f"LLM configured: provider={provider} model={model} (worker)")
+        # Also print to stdout to guarantee visibility regardless of logging config
+        print(f"LLM configured: provider={provider} model={model} (worker)")
+    except Exception as e:
+        logger.warning(f"Could not determine LLM provider/model: {e}")
 
     # Tasks will be registered automatically by Worker.run() from all_tasks
 

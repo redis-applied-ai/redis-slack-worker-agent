@@ -5,6 +5,7 @@ This module creates and configures the FastAPI application with all routers and 
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from docket.docket import Docket
@@ -26,7 +27,10 @@ from app.api.auth import callback, content_page, debug_callback_url, home, login
 from app.api.slack_app import get_slack_app
 from app.utilities import keys
 from app.utilities.environment import get_env_var
-from app.utilities.logging_config import configure_uvicorn_logging
+from app.utilities.logging_config import (
+    configure_uvicorn_logging,
+    ensure_stdout_logging,
+)
 from app.utilities.telemetry import setup_telemetry
 from app.worker.task_registration import register_all_tasks
 
@@ -343,6 +347,22 @@ async def setup_slack_app():
 async def lifespan(app: FastAPI):
     """FastAPI lifespan context manager."""
     print("Starting up FastAPI application with Docket...")
+
+    # Ensure logs go to stdout with a sane default
+    ensure_stdout_logging()
+
+    # Log LLM provider/model at API startup for visibility
+    try:
+        provider = os.getenv("LLM_PROVIDER", "bedrock").lower()
+        if provider == "bedrock":
+            model = os.getenv(
+                "BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0"
+            )
+        else:
+            model = os.getenv("OPENAI_CHAT_MODEL", "gpt-4.1")
+        logger.info(f"LLM configured: provider={provider} model={model} (api)")
+    except Exception as e:
+        logger.warning(f"Could not determine LLM provider/model on API startup: {e}")
 
     try:
         await setup_slack_app()

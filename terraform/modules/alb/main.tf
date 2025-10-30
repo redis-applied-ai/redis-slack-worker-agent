@@ -17,7 +17,7 @@ resource "aws_lb" "main" {
 
 # HTTP Listener (for redirect to HTTPS)
 resource "aws_lb_listener" "http" {
-  count = var.certificate_arn != null && var.certificate_arn != "" ? 1 : 0
+  count = var.domain_name != "" ? 1 : 0
 
   load_balancer_arn = aws_lb.main.arn
   port              = "80"
@@ -36,7 +36,7 @@ resource "aws_lb_listener" "http" {
 
 # HTTPS Listener
 resource "aws_lb_listener" "https" {
-  count = var.certificate_arn != null && var.certificate_arn != "" ? 1 : 0
+  count = var.domain_name != "" ? 1 : 0
 
   load_balancer_arn = aws_lb.main.arn
   port              = "443"
@@ -52,7 +52,7 @@ resource "aws_lb_listener" "https" {
 
 # HTTP Listener (fallback when no SSL certificate)
 resource "aws_lb_listener" "http_fallback" {
-  count = var.certificate_arn == "" ? 1 : 0
+  count = var.domain_name == "" ? 1 : 0
 
   load_balancer_arn = aws_lb.main.arn
   port              = "80"
@@ -66,7 +66,7 @@ resource "aws_lb_listener" "http_fallback" {
 
 # Listener Rule for API routes
 resource "aws_lb_listener_rule" "api" {
-  count = var.certificate_arn != null && var.certificate_arn != "" ? 1 : 0
+  count = var.domain_name != "" ? 1 : 0
 
   listener_arn = aws_lb_listener.https[0].arn
   priority     = 100
@@ -85,7 +85,7 @@ resource "aws_lb_listener_rule" "api" {
 
 # Listener Rule for API routes (HTTP fallback)
 resource "aws_lb_listener_rule" "api_http" {
-  count = var.certificate_arn == "" ? 1 : 0
+  count = var.domain_name == "" ? 1 : 0
 
   listener_arn = aws_lb_listener.http_fallback[0].arn
   priority     = 100
@@ -155,7 +155,7 @@ resource "aws_lb_target_group" "memory_server" {
 
 # Listener Rule for Agent Memory Server (HTTPS)
 resource "aws_lb_listener_rule" "memory_server" {
-  count = var.certificate_arn != null && var.certificate_arn != "" ? 1 : 0
+  count = var.domain_name != "" ? 1 : 0
 
   listener_arn = aws_lb_listener.https[0].arn
   priority     = 50
@@ -174,7 +174,7 @@ resource "aws_lb_listener_rule" "memory_server" {
 
 # Listener Rule for Agent Memory Server (HTTP fallback)
 resource "aws_lb_listener_rule" "memory_server_http" {
-  count = var.certificate_arn == null || var.certificate_arn == "" ? 1 : 0
+  count = var.domain_name == "" ? 1 : 0
 
   listener_arn = aws_lb_listener.http_fallback[0].arn
   priority     = 50

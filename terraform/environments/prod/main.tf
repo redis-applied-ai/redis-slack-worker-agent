@@ -3,7 +3,6 @@
 module "applied_ai_agent" {
   source = "../../"
 
-  environment = "prod"
   aws_region  = "us-east-2"
 
   # VPC Configuration
@@ -27,6 +26,9 @@ module "applied_ai_agent" {
   memory_server_port = 8000
   cpu_units          = 1024
   memory_units       = 2048
+
+  # Bedrock/OpenAI provider env passed through
+  environment_variables = var.environment_variables
 
   # SSL Configuration (required for production)
   # domain_name = "your-domain.com"

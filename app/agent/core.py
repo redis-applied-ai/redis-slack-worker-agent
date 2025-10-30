@@ -20,6 +20,11 @@ from redisvl.index.index import AsyncSearchIndex
 from redisvl.utils.vectorize import OpenAITextVectorizer
 
 from app.agent.tools import get_search_knowledge_base_tool, get_web_search_tool
+from app.utilities.bedrock_client import (
+    bedrock_text_blocks_to_text,
+    get_bedrock_runtime_client,
+    map_openai_tools_to_bedrock_tool_config,
+)
 from app.utilities.openai_client import get_instrumented_client
 
 logger = logging.getLogger(__name__)
@@ -308,6 +313,19 @@ async def answer_question(
         thread_context: Optional conversation context
         progress_callback: Optional callback function to send progress updates
     """
+    # Provider toggle: route to Bedrock implementation when requested
+    provider = os.getenv("LLM_PROVIDER", "bedrock").lower()
+    if provider == "bedrock":
+        return await answer_question_bedrock(
+            index=index,
+            vectorizer=vectorizer,
+            query=query,
+            session_id=session_id,
+            user_id=user_id,
+            thread_context=thread_context,
+            progress_callback=progress_callback,
+        )
+
     # Get the underlying OpenAI client for direct access
     client = get_instrumented_client()._client
 
@@ -332,6 +350,8 @@ async def answer_question(
         get_web_search_tool(),
         *MemoryAPIClient.get_all_memory_tool_schemas(),
     ]
+
+    logger.info(f"Using LLM provider=openai model={CHAT_MODEL}")
 
     logger.info(f"Available tools: {[tool['function']['name'] for tool in tools]}")
 
@@ -561,7 +581,7 @@ async def answer_question(
 
     # Record metrics for this answer completion
     try:
-        from app.metrics import get_token_metrics
+        from app.utilities.metrics import get_token_metrics
 
         token_metrics = get_token_metrics()
         if token_metrics:
@@ -652,3 +672,202 @@ def _parse_llm_response(content: str) -> tuple[str, bool]:
     except Exception as e:
         logger.error(f"Error parsing LLM response: {e}")
         return content, False
+
+
+async def answer_question_bedrock(
+    index: AsyncSearchIndex,
+    vectorizer: OpenAITextVectorizer,
+    query: str,
+    session_id: str,
+    user_id: str,
+    thread_context: list[dict] | None = None,
+    progress_callback=None,
+) -> str:
+    """Bedrock-based implementation of the agent loop using Converse API with tools."""
+    client = get_bedrock_runtime_client()
+    model_id = os.getenv(
+        "BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    )
+    logger.info(f"Using LLM provider=bedrock model={model_id}")
+
+    initial_message = create_initial_message_without_search(query, thread_context)
+    bedrock_messages: list[dict] = [
+        {"role": "user", "content": [{"text": initial_message}]}
+    ]
+
+    tools_openai = [
+        get_search_knowledge_base_tool(),
+        get_web_search_tool(),
+        *MemoryAPIClient.get_all_memory_tool_schemas(),
+    ]
+    tool_config = map_openai_tools_to_bedrock_tool_config(tools_openai)
+
+    max_iterations = 25
+    iteration = 0
+    total_tokens = 0
+    total_tool_calls = 0
+
+    while iteration < max_iterations:
+        iteration += 1
+        response = client.converse(
+            modelId=model_id,
+            system=[{"text": SYSTEM_PROMPT}],
+            messages=bedrock_messages,
+            toolConfig=tool_config,
+        )
+
+        usage = response.get("usage") or {}
+        total_tokens += int(usage.get("inputTokens", 0)) + int(
+            usage.get("outputTokens", 0)
+        )
+
+        output_message = response.get("output", {}).get("message", {})
+        stop_reason = response.get("stopReason")
+
+        if stop_reason == "tool_use":
+            # Collect toolUse requests and produce toolResult blocks
+            tool_result_blocks: list[dict] = []
+            if progress_callback:
+                await progress_callback("Using tools...")
+
+            for block in output_message.get("content", []) or []:
+                tool_use = block.get("toolUse") if isinstance(block, dict) else None
+                if not tool_use:
+                    continue
+                name = tool_use.get("name")
+                tool_use_id = tool_use.get("toolUseId")
+                input_payload = tool_use.get("input") or {}
+                total_tool_calls += 1
+
+                try:
+                    if name == "search_knowledge_base":
+                        if progress_callback:
+                            await progress_callback("Searching knowledge base...")
+                        from app.agent.tools.search_knowledge_base import (
+                            search_knowledge_base,
+                        )
+
+                        q = (input_payload or {}).get("query", "")
+                        result_text = await search_knowledge_base(index, vectorizer, q)
+                        tool_result_blocks.append(
+                            {
+                                "toolResult": {
+                                    "toolUseId": tool_use_id,
+                                    "content": [{"text": str(result_text)}],
+                                    "status": "success",
+                                }
+                            }
+                        )
+                    elif name == "web_search":
+                        if progress_callback:
+                            await progress_callback("Searching the web...")
+                        from app.agent.tools.web_search import perform_web_search
+
+                        q = (input_payload or {}).get("query", "")
+                        web_res = await perform_web_search(
+                            query=q,
+                            search_depth="basic",
+                            max_results=5,
+                            redis_focused=True,
+                        )
+                        tool_result_blocks.append(
+                            {
+                                "toolResult": {
+                                    "toolUseId": tool_use_id,
+                                    "content": [{"text": str(web_res)}],
+                                    "status": "success",
+                                }
+                            }
+                        )
+                    else:
+                        # Memory tools or others resolved via memory client
+                        if progress_callback:
+                            await progress_callback("Using memory tools...")
+                        memory_client = await get_memory_client()
+                        # Enforce user_id for memory tools
+                        args = dict(input_payload or {})
+                        memory_tool_names = {
+                            "search_memory",
+                            "add_memory_to_working_memory",
+                            "update_working_memory_data",
+                            "get_working_memory",
+                            "search_long_term_memory",
+                            "memory_prompt",
+                            "set_working_memory",
+                        }
+                        if name in memory_tool_names:
+                            args["user_id"] = user_id
+                        function_call = {"name": name, "arguments": json.dumps(args)}
+                        mem_res = await memory_client.resolve_tool_call(
+                            tool_call=function_call,
+                            session_id=session_id,
+                            user_id=user_id,
+                        )
+                        tool_content = (
+                            str(mem_res)
+                            if isinstance(mem_res, (dict, list))
+                            else str(mem_res)
+                        )
+                        tool_content += "\n\nReflect on this memory tool result and your instructions about how to use memory tools. Make subsequent memory tool calls if necessary."
+                        tool_result_blocks.append(
+                            {
+                                "toolResult": {
+                                    "toolUseId": tool_use_id,
+                                    "content": [{"text": tool_content}],
+                                    "status": "success",
+                                }
+                            }
+                        )
+                except Exception as e:
+                    logger.error(f"Tool execution error for {name}: {e}")
+                    tool_result_blocks.append(
+                        {
+                            "toolResult": {
+                                "toolUseId": tool_use_id,
+                                "content": [
+                                    {"text": f"Error executing tool {name}: {str(e)}"}
+                                ],
+                                "status": "error",
+                            }
+                        }
+                    )
+
+            # Append assistant request and our tool results back to the conversation
+            bedrock_messages.append(output_message)
+            if tool_result_blocks:
+                bedrock_messages.append({"role": "user", "content": tool_result_blocks})
+            # Continue loop for model to produce next step
+            continue
+
+        # No tool use requested; treat as final answer
+        final_text = bedrock_text_blocks_to_text(output_message.get("content", []))
+        response_text, use_org_search = _parse_llm_response(final_text)
+        if use_org_search:
+            logger.info("LLM wanted to use org search, but org search is disabled")
+
+        # Metrics
+        try:
+            from app.utilities.metrics import get_token_metrics
+
+            token_metrics = get_token_metrics()
+            if token_metrics:
+                token_metrics.record_answer_completion(
+                    model=model_id,
+                    total_tokens=total_tokens,
+                    tool_calls=total_tool_calls,
+                )
+                logger.info(
+                    f"Recorded metrics for answer completion: model={model_id}, tokens={total_tokens}, tool_calls={total_tool_calls}"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to record metrics for answer completion: {e}")
+
+        return response_text
+
+    # Max iterations reached; return last assistant text if any
+    last_text = (
+        bedrock_text_blocks_to_text(output_message.get("content", []))
+        if "output_message" in locals()
+        else ""
+    )
+    return last_text or "I'm sorry, I couldn't complete the request."

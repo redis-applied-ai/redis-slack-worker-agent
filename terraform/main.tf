@@ -148,8 +148,10 @@ module "domain" {
 
   domain_name  = var.domain_name
   project_name = var.project_name
-  alb_dns_name = module.alb.alb_dns_name
-  alb_zone_id  = module.alb.alb_zone_id
+  # Route53 alias to ALB is optional and created later to avoid dependency cycles
+  # create_alias = true
+  # alb_dns_name = module.alb.alb_dns_name
+  # alb_zone_id  = module.alb.alb_zone_id
 }
 
 # IAM Module

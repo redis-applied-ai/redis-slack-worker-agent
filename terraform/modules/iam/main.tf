@@ -240,3 +240,30 @@ resource "aws_iam_role_policy_attachment" "ecs_autoscaling_role_policy" {
   role       = aws_iam_role.ecs_autoscaling_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
 }
+
+
+# ECS Task Role Policy for Amazon Bedrock inference (Converse / InvokeModel)
+resource "aws_iam_policy" "ecs_task_bedrock_policy" {
+  name        = "${var.project_name}-ecs-task-bedrock-policy"
+  description = "Allow ECS tasks to invoke Amazon Bedrock models"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+        ]
+        # Allow base model invocation in the current region; adjust if using provisioned/custom models
+        Resource = "arn:aws:bedrock:*::foundation-model/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_task_bedrock_policy" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = aws_iam_policy.ecs_task_bedrock_policy.arn
+}

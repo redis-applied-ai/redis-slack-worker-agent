@@ -42,8 +42,8 @@ uv sync
 cp .env.example .env
 # Edit .env with your API keys
 
-# Start Redis (with RedisJSON module for content management)
-docker run -d -p 6379:6379 redis/redis-stack:latest
+# Start Redis 8 (no Redis Stack required)
+docker run -d -p 6379:6379 redis:8-alpine
 
 # Seed database
 uv run python scripts/seed.py
@@ -91,6 +91,45 @@ SLACK_SIGNING_SECRET=your-signing-secret
 OPENAI_API_KEY=your-openai-key
 TAVILY_API_KEY=your-tavily-key  # Web search tool
 REDIS_URL=redis://localhost:6379/0
+```
+
+
+## Amazon Bedrock (LLM provider option)
+
+This repo includes scripts to automate IAM permissions for Bedrock and a local tool-calling test script.
+
+Prerequisites
+- AWS CLI v2 configured with credentials
+- Region: us-east-1 (default)
+
+1) Grant Bedrock invoke permissions to an IAM user
+```bash
+chmod +x scripts/bedrock_provision_access.sh
+scripts/bedrock_provision_access.sh user <YOUR_IAM_USER_NAME> us-east-1
+```
+This attaches a minimal policy that allows invoking Bedrock models and listing model info. If you see AccessDenied during inference, enable model access in the console.
+
+2) Enable model access (one-time, per account/region)
+Open the Bedrock Model access page and enable the providers/models you plan to use (default used here is Claude 3.5 Sonnet):
+- https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/model-access
+
+3) Switch provider to Bedrock and run locally
+```bash
+export AWS_DEFAULT_REGION=us-east-1
+export LLM_PROVIDER=bedrock
+export BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
+export LOG_LEVEL=INFO
+uv run python -m app.worker &
+uv run fastapi dev app/api/main.py
+```
+You should see logs like: "LLM configured: provider=bedrock model=anthropic.claude-3-5-sonnet-20240620-v1:0"
+
+Optional: add to your .env for convenience
+```bash
+AWS_DEFAULT_REGION=us-east-1
+BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v1:0
+# Future toggle; default provider may be Bedrock in this repo
+LLM_PROVIDER=bedrock
 ```
 
 ## Deployment (AWS, single environment)
