@@ -38,8 +38,22 @@ os.environ.update(
         "OPENAI_API_KEY": "test-openai-key",
         "TAVILY_API_KEY": "test-tavily-key",
         "LOCAL": "false",  # Disable local mode for tests
+        "LLM_PROVIDER": "openai",  # Ensure legacy tests exercise the OpenAI path
     }
 )
+# Prevent .env from overriding test environment variables during test session
+try:
+    from dotenv import load_dotenv
+
+    import app.utilities.environment as _env_mod
+
+    # Load .env without overriding explicitly-set environment variables
+    load_dotenv(override=False)
+    # Mark as loaded to skip future override=True reloads inside get_env_var()
+    if hasattr(_env_mod, "_env_loaded"):
+        _env_mod._env_loaded = True  # type: ignore[attr-defined]
+except Exception:
+    pass
 
 
 @pytest.fixture

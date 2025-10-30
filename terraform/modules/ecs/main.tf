@@ -263,9 +263,10 @@ resource "aws_ecs_task_definition" "memory_server" {
 resource "aws_ecs_service" "memory_server" {
   name            = "${var.project_name}-agent-memory-server-service"
   cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.memory_server.family
+  task_definition = aws_ecs_task_definition.memory_server.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  force_new_deployment = true
 
   enable_execute_command = true
 
@@ -489,9 +490,10 @@ resource "aws_ecs_task_definition" "worker" {
 resource "aws_ecs_service" "api" {
   name            = "${var.project_name}-api-service"
   cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.api.family
+  task_definition = aws_ecs_task_definition.api.arn
   desired_count   = var.desired_capacity
   launch_type     = "FARGATE"
+  force_new_deployment = true
 
   enable_execute_command = true
 
@@ -516,9 +518,10 @@ resource "aws_ecs_service" "api" {
 resource "aws_ecs_service" "worker" {
   name            = "${var.project_name}-worker-service"
   cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.worker.family
+  task_definition = aws_ecs_task_definition.worker.arn
   desired_count   = var.worker_desired_capacity
   launch_type     = "FARGATE"
+  force_new_deployment = true
 
   enable_execute_command = true
 

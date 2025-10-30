@@ -49,8 +49,9 @@ resource "aws_acm_certificate_validation" "main" {
   }
 }
 
-# ALB DNS record
+# ALB DNS record (optional)
 resource "aws_route53_record" "alb" {
+  count   = var.create_alias ? 1 : 0
   zone_id = data.aws_route53_zone.main.zone_id
   name    = "${var.project_name}.${var.domain_name}"
   type    = "A"
