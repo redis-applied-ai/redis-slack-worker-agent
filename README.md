@@ -14,7 +14,7 @@ Internally at Redis, this bot extends the Applied AI engineering team by assisti
 
 ## Architecture
 
-![Application Architecture](resources/haink_task_flow.png)
+![Application Architecture](resources/haink_aws_architecture.png)
 
 **TLDR Flow**: Slack → FastAPI webhook → Redis task queue → Agent workers pick up and execute tasks → Agent workers perform tool calls and ReAct style execution -> invoke Slack callbacks async.
 
