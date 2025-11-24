@@ -47,16 +47,16 @@ def get_redis_url() -> str:
 logger = logging.getLogger(__name__)
 
 
-async def process_haink_mention(
+async def process_agent_mention(
     user: str,
     text: str,
     channel: str,
     thread_ts: str | None = None,
     message_ts: str | None = None,
 ):
-    """Core logic for processing Haink mentions/triggers - shared by app mentions and name-only triggers."""
+    """Core logic for processing agent mentions/triggers - shared by app mentions and name-only triggers."""
 
-    # Track that Haink has been mentioned in this thread
+    # Track that agent has been mentioned in this thread
     if thread_ts:  # Only track if we have a valid thread timestamp
         await track_thread_participation(channel, thread_ts)
 
@@ -64,16 +64,6 @@ async def process_haink_mention(
     bot_user_id = await get_bot_user_id()
     mention_text = f"<@{bot_user_id}>"
     remaining_text = text.replace(mention_text, "").strip()
-
-    # For name-only triggers, treat them as bumps if they're just the name
-    if mention_text not in text:
-        # This is a name-only trigger like "Haink"
-        clean_text = text.strip().rstrip("!?.,").lower()
-        if clean_text == "haink":
-            # Treat name-only "Haink" as a bump
-            remaining_text = ""
-        else:
-            remaining_text = text.strip()
 
     # If it's just a mention or very short text, treat as a "bump"
     if len(remaining_text) <= 3:  # Just punctuation, spaces, or very short
@@ -151,7 +141,7 @@ async def handle_app_mentions(body, say, ack):
         thread_ts = body["event"]["ts"]
 
     # Use shared processing logic
-    await process_haink_mention(user, text, channel, thread_ts, message_ts)
+    await process_agent_mention(user, text, channel, thread_ts, message_ts)
 
 
 async def handle_message_events(body, say, ack, logger):
@@ -173,7 +163,7 @@ async def handle_message_events(body, say, ack, logger):
     # Get bot user ID for filtering
     bot_user_id = await get_bot_user_id()
 
-    # Skip if this is Haink's own message
+    # Skip if this is Agent's own message
     if user_id == bot_user_id:
         return
 
@@ -206,35 +196,6 @@ async def handle_message_events(body, say, ack, logger):
                 channel_id=channel,
                 thread_ts=thread_ts,
             )
-        return
-
-    # Case 2: Handle thread messages - Check for name-only trigger
-    if thread_ts:
-        # Skip if user mentions Haink (handled by app_mention)
-        if f"<@{bot_user_id}>" in message_text:
-            logger.info(
-                f"Skipping thread message because Haink is mentioned: {message_text}"
-            )
-            return
-
-        # Check if this is just "Haink" by itself (name-only trigger)
-        # Strip whitespace and common punctuation
-        clean_text = message_text.strip().rstrip("!?.,").lower()
-
-        if clean_text == "haink":
-            logger.info(
-                f"Name-only trigger detected: '{message_text}' -> treating as @ mention"
-            )
-
-            # Call the core mention processing logic directly
-            await process_haink_mention(
-                user_id, message_text, channel, thread_ts, event.get("ts")
-            )
-
-            return
-
-        # SIMPLIFIED: Haink only responds to @ mentions or name-only triggers
-        logger.debug(f"Ignoring thread message (no trigger): {message_text[:50]}...")
         return
 
     # Case 3: Ignore other channel messages that aren't DMs or in threads

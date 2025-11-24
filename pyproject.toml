@@ -44,9 +44,6 @@ dependencies = [
     "pypdf>=6.0.0",
 ]
 
-[project.scripts]
-haink = "haink:cli"
-
 [tool.hatch.build.targets.wheel]
 # Includes all files in the root directory. Use only-include to narrow.
 include = [
