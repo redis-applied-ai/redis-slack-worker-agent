@@ -9,7 +9,6 @@ from .slack_tasks import (
     check_rate_limit,
     check_recent_activity,
     check_thread_participation,
-    classify_message_intent,
     evaluate_bump_context,
     generate_rag_response,
     get_bot_user_id,
@@ -44,6 +43,5 @@ __all__ = [
     "check_recent_activity",
     "check_rate_limit",
     "evaluate_bump_context",
-    "classify_message_intent",
     "get_bot_user_id",
 ]
