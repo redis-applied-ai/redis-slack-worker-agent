@@ -386,7 +386,7 @@ async def process_slack_question_with_retry(
 async def track_thread_participation(
     channel_id: str, thread_ts: str, participated: bool = True
 ) -> None:
-    """Track Haink's participation in a thread."""
+    """Track Agent's participation in a thread."""
     client = get_redis_client()
     participation_key = keys.thread_participation_key(channel_id, thread_ts)
     activity_key = keys.thread_activity_key(channel_id, thread_ts)
@@ -401,7 +401,7 @@ async def track_thread_participation(
 
 
 async def check_thread_participation(channel_id: str, thread_ts: str) -> bool:
-    """Check if Haink has participated in this thread."""
+    """Check if Agent has participated in this thread."""
     client = get_redis_client()
     participation_key = keys.thread_participation_key(channel_id, thread_ts)
 
@@ -412,7 +412,7 @@ async def check_thread_participation(channel_id: str, thread_ts: str) -> bool:
 async def check_recent_activity(
     channel_id: str, thread_ts: str, timeout_minutes: int = 30
 ) -> bool:
-    """Check if Haink was recently active in this thread."""
+    """Check if Agent was recently active in this thread."""
     client = get_redis_client()
     activity_key = keys.thread_activity_key(channel_id, thread_ts)
 
@@ -498,93 +498,6 @@ async def evaluate_bump_context(thread_context: list[dict]) -> bool:
     return False
 
 
-async def classify_message_intent(
-    message_text: str, thread_context: list[dict]
-) -> dict:
-    """Use GPT-4.1-nano to classify if message is directed at Haink."""
-    # Check cache first
-    message_hash = hashlib.sha256(message_text.encode()).hexdigest()
-    cache_key = keys.intent_classification_cache_key(message_hash)
-    client = get_redis_client()
-
-    cached_result = await client.get(cache_key)
-    if cached_result:
-        try:
-            return json.loads(cached_result)
-        except json.JSONDecodeError:
-            pass
-
-    # Prepare context for classification
-    recent_context = thread_context[-3:] if len(thread_context) > 3 else thread_context
-    context_str = "\n".join([f"{msg['user']}: {msg['text']}" for msg in recent_context])
-
-    prompt = f"""Analyze if this Slack message is directed at an AI assistant named Haink:
-
-Message: "{message_text}"
-Recent context: {context_str}
-
-Return JSON:
-{{
-    "is_for_ai": boolean,
-    "confidence": float (0.0-1.0),
-    "intent_type": "question|followup|clarification|feedback|off_topic",
-    "reasoning": "brief explanation"
-}}"""
-
-    try:
-        from app.openai_client import get_instrumented_client
-
-        client_openai = get_instrumented_client()
-        response = client_openai.chat.completions.create(
-            model="gpt-4.1-nano",
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
-            max_tokens=150,
-            temperature=0.1,
-        )
-
-        content = response.choices[0].message.content
-        if content:
-            result = json.loads(content)
-            # Cache the result for 1 hour
-            await client.set(cache_key, json.dumps(result), ex=3600)
-            return result
-
-    except Exception as e:
-        logger.error(f"Error in intent classification: {e}")
-
-    # Fallback: conservative classification
-    return {
-        "is_for_ai": False,
-        "confidence": 0.0,
-        "intent_type": "off_topic",
-        "reasoning": "Classification failed, defaulting to conservative",
-    }
-
-
-async def check_haink_mention_in_thread(channel_id: str, thread_ts: str) -> bool:
-    """Check if Haink has been mentioned anywhere in the thread."""
-    try:
-        slack_app = get_slack_app()
-        bot_user_id = await get_bot_user_id()
-
-        result = await slack_app.client.conversations_replies(
-            channel=channel_id, ts=thread_ts, limit=50
-        )
-
-        if result["ok"]:
-            messages = result["messages"]
-            for message in messages:
-                text = message.get("text", "")
-                if f"<@{bot_user_id}>" in text:
-                    return True
-        return False
-
-    except Exception as e:
-        logger.error(f"Error checking mentions in thread: {e}")
-        return False
-
-
 async def get_bot_user_id() -> str:
     """Get the bot's user ID from Slack API."""
     slack_app = get_slack_app()
@@ -594,128 +507,3 @@ async def get_bot_user_id() -> str:
     except Exception as e:
         logger.error(f"Error getting bot user ID: {e}")
         return ""
-
-
-async def should_respond_to_thread_message(
-    channel_id: str, thread_ts: str, user_id: str, message_text: str
-) -> bool:
-    """Determine if Haink should respond to a non-mention thread message."""
-
-    # Check if we're being rate limited
-    if await check_rate_limit(channel_id, thread_ts):
-        return False
-
-    # Handle "bump" - empty message with just Haink mention (handled elsewhere)
-    # This function should be more conservative and only respond to clear questions
-
-    # Get thread context for analysis
-    thread_context = await get_thread_context(channel_id, thread_ts)
-
-    # Only respond if:
-    # 1. There's a clear question mark in recent messages
-    # 2. OR someone seems to be waiting for technical help/clarification
-    # 3. AND we haven't responded to anything similar recently
-
-    # Look for question indicators in the current message
-    question_indicators = [
-        "?",
-        "how",
-        "what",
-        "why",
-        "when",
-        "where",
-        "which",
-        "can you",
-        "could you",
-        "help",
-    ]
-    has_question = any(
-        indicator in message_text.lower() for indicator in question_indicators
-    )
-
-    # Look for technical terms that might need clarification
-    tech_terms = [
-        "redis",
-        "vector",
-        "cache",
-        "database",
-        "ai",
-        "ml",
-        "search",
-        "index",
-        "query",
-    ]
-    has_tech_terms = any(term in message_text.lower() for term in tech_terms)
-
-    # CRITICAL: If someone is @mentioning another user, NEVER butt in
-    # Look for @username or @here or @channel patterns
-    import re
-
-    bot_user_id = await get_bot_user_id()
-
-    # Check for @mentions that aren't Haink
-    at_mention_pattern = r"@\w+|@here|@channel|<@[^>]+>"
-    mentions_found = re.findall(at_mention_pattern, message_text)
-
-    # Filter out Haink's own mention
-    other_mentions = [m for m in mentions_found if f"<@{bot_user_id}>" not in m]
-
-    if other_mentions:
-        logger.info(
-            f"BLOCKING response - message has @mentions for others: {other_mentions} in '{message_text[:50]}'"
-        )
-        return False
-
-    # Also block if the message is clearly directed at someone else contextually
-    directed_patterns = [
-        r"^@\w+",  # Starts with @username
-        r"hey @\w+",
-        r"hi @\w+",
-        r"@\w+[,:]",  # @username, or @username:
-    ]
-
-    for pattern in directed_patterns:
-        if re.search(pattern, message_text.lower()):
-            logger.info(
-                f"BLOCKING response - message directed at someone else: '{message_text[:50]}'"
-            )
-            return False
-
-    # Be VERY conservative - only respond if there's a clear question AND tech terms
-    # AND the AI is very confident it's directed at Haink
-    should_respond = has_question and has_tech_terms
-
-    if should_respond:
-        # Double-check with AI classification for complex cases
-        classification = await classify_message_intent(message_text, thread_context)
-        is_for_ai = classification.get("is_for_ai", False)
-        confidence = classification.get("confidence", 0.0)
-
-        logger.info(
-            f"Thread analysis - Question: {has_question}, Tech: {has_tech_terms}, AI confident: {is_for_ai} ({confidence})"
-        )
-
-        # Be much more conservative - require high confidence AND explicit indicators
-        if confidence >= 0.8 and is_for_ai:
-            # Additional safety check: if message mentions "Haink" but isn't a direct question TO Haink, be careful
-            if "haink" in message_text.lower() and not any(
-                pattern in message_text.lower()
-                for pattern in [
-                    "haink can you",
-                    "haink could you",
-                    "haink help",
-                    "haink what",
-                    "haink how",
-                    "haink why",
-                ]
-            ):
-                logger.info(
-                    f"BLOCKING - mentions Haink but doesn't seem directed at him: '{message_text[:50]}'"
-                )
-                return False
-            return True
-
-    logger.info(
-        f"Not responding - Question: {has_question}, Tech: {has_tech_terms}, Should: {should_respond}"
-    )
-    return False

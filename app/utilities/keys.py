@@ -67,12 +67,12 @@ def error_reminder_key(question_hash: str) -> str:
 
 # Thread awareness keys
 def thread_participation_key(channel_id: str, thread_ts: str) -> str:
-    """Key to track Haink's participation in a thread."""
+    """Key to track agent's participation in a thread."""
     return f"thread_participation:{channel_id}:{thread_ts}"
 
 
 def thread_activity_key(channel_id: str, thread_ts: str) -> str:
-    """Key to track Haink's last activity timestamp in a thread."""
+    """Key to track agent's last activity timestamp in a thread."""
     return f"thread_activity:{channel_id}:{thread_ts}"
 
 

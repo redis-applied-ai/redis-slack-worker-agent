@@ -6,7 +6,6 @@ This package contains all agent-specific task modules.
 
 # Import all task functions for easy access
 from .slack_tasks import (
-    check_haink_mention_in_thread,
     check_rate_limit,
     check_recent_activity,
     check_thread_participation,
@@ -20,7 +19,6 @@ from .slack_tasks import (
     process_slack_question_with_retry,
     schedule_reminder,
     send_delayed_reminder,
-    should_respond_to_thread_message,
     store_answer_data,
     track_thread_participation,
     update_answer_feedback,
@@ -47,7 +45,5 @@ __all__ = [
     "check_rate_limit",
     "evaluate_bump_context",
     "classify_message_intent",
-    "check_haink_mention_in_thread",
     "get_bot_user_id",
-    "should_respond_to_thread_message",
 ]
